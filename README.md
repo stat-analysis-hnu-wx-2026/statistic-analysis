@@ -82,6 +82,31 @@ pip install -r requirements.txt
 python build.py
 ```
 
+### 本地运行（localhost）
+
+Pyodide 需要通过 HTTP 访问，不能直接双击 `html` 文件。
+
+推荐一键命令：
+
+```bash
+python run_localhost.py
+```
+
+默认会先构建，再在 `http://127.0.0.1:8000` 启动服务。
+
+常用参数：
+
+```bash
+# 仅构建，不启动服务
+python run_localhost.py --build-only
+
+# 指定端口
+python run_localhost.py --port 5173
+
+# 跳过构建，直接服务 build/
+python run_localhost.py --skip-build
+```
+
 ### 构建做了什么
 
 `build.py` 读取模板 `html/index.html`，通过字符串替换完成拼装：
@@ -206,4 +231,3 @@ Python 函数应返回 dict，经 `toJs({ dict_converter: Object.fromEntries })`
 | Pygments | 构建时 Python 代码语法高亮（Monokai 主题） | `pip install pygments` |
 | numpy | 数值计算（通过 Pyodide 加载） | CDN 自动加载 |
 | matplotlib | 数据可视化（通过 Pyodide 加载） | CDN 自动加载 |
-

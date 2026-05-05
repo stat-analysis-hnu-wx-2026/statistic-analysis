@@ -5,8 +5,8 @@
       <div class="breadcrumb"><i class="fas fa-folder-open"></i> 当前任务 / 无监督学习 / 聚类</div>
     </div>
     <div class="header-actions">
-      <div class="btn-outline"><i class="fas fa-download"></i> 导出报告</div>
-      <button class="btn-primary btn-run" data-module="Clustering" data-func="analyze" disabled>
+      <button class="btn-outline btn-export" type="button"><i class="fas fa-download"></i> 导出报告</button>
+      <button class="btn-primary btn-run" data-module="Clustering" data-func="analyze">
         <i class="fas fa-play"></i> 运行分析
       </button>
     </div>
@@ -17,19 +17,43 @@
     <div class="param-grid">
       <div class="param-field">
         <label>算法</label>
-        <div class="fake-select">K-Means (Lloyd) <i class="fas fa-chevron-down"></i></div>
+        <select class="fake-select-control" data-param="algorithm">
+          <option value="kmeans" selected>K-Means</option>
+          <option value="hierarchical">Hierarchical</option>
+        </select>
+      </div>
+      <div class="param-field">
+        <label>Loss</label>
+        <select class="fake-select-control" data-param="loss">
+          <option value="lloyd" selected>lloyd</option>
+          <option value="elkan">elkan</option>
+        </select>
       </div>
       <div class="param-field">
         <label>簇数量 K</label>
-        <div class="fake-select">3 <i class="fas fa-chevron-down"></i></div>
+        <input class="fake-select-control" data-param="n_clusters" type="number" min="2" max="12" value="3">
       </div>
       <div class="param-field">
         <label>初始化方法</label>
-        <div class="fake-select">k-means++ <i class="fas fa-chevron-down"></i></div>
+        <select class="fake-select-control" data-param="init">
+          <option value="k-means++" selected>k-means++</option>
+          <option value="random">random</option>
+        </select>
       </div>
       <div class="param-field">
         <label>最大迭代</label>
-        <div class="fake-select">300 <i class="fas fa-chevron-down"></i></div>
+        <input class="fake-select-control" data-param="max_iter" type="number" min="50" max="2000" value="300">
+      </div>
+      <div class="param-field">
+        <label>Excel sheet 序号</label>
+        <input class="fake-select-control" data-param="sheet_selector" type="text" value="1" placeholder="例如: 1 或 1,3,5">
+      </div>
+      <div class="param-field">
+        <label>图形类型</label>
+        <select class="fake-select-control" data-param="plot_type">
+          <option value="scatter" selected>Scatter</option>
+          <option value="dendrogram">Dendrogram</option>
+        </select>
       </div>
     </div>
   </div>
@@ -38,7 +62,10 @@
     <div class="chart-header">
       <h3><i class="fas fa-chart-pie" style="margin-right:8px; color:#1e4b6e;"></i>聚类散点图 (前两个主成分)</h3>
     </div>
-    <div class="chart-container"></div>
+    <div class="chart-container" style="min-height:240px;display:flex;align-items:center;justify-content:center;color:#7a8c9d;">
+      点击“运行分析”后在这里显示图形
+    </div>
+    <pre class="py-output" style="margin:12px 8px 0;padding:10px 12px;background:#f6f9fc;border:1px solid #e2eaf2;border-radius:8px;color:#3e5468;font-size:12px;white-space:pre-wrap;">等待运行...</pre>
   </div>
 
   <div class="metrics-row">

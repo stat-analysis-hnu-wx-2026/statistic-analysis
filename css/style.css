@@ -312,6 +312,22 @@ body {
   font-size: 14px;
 }
 
+.fake-select-control {
+  background: #f9fbfd;
+  border: 1px solid #d6e0ea;
+  border-radius: 40px;
+  padding: 10px 20px;
+  font-size: 14px;
+  min-width: 180px;
+  color: #1f3a4e;
+  outline: none;
+}
+
+.fake-select-control:focus {
+  border-color: #2a5c8a;
+  box-shadow: 0 0 0 2px rgba(42, 92, 138, 0.15);
+}
+
 .run-btn {
   background: #2a5c8a;
   color: white;

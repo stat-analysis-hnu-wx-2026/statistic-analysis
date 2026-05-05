@@ -26,6 +26,7 @@ async function loadModule(name) {
     moduleEl.classList.add('active')
 
     if (typeof bindRunButtons === 'function') bindRunButtons()
+    if (typeof bindExportButtons === 'function') bindExportButtons()
     if (window.pyodideReady) {
       moduleEl.querySelectorAll('.btn-run').forEach(b => { b.disabled = false })
     }

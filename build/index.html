@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -91,8 +92,8 @@ window.MODULE_HTML = {
       <div class="breadcrumb"><i class="fas fa-folder-open"></i> 当前任务 / 无监督学习 / 聚类</div>
     </div>
     <div class="header-actions">
-      <div class="btn-outline"><i class="fas fa-download"></i> 导出报告</div>
-      <button class="btn-primary btn-run" data-module="Clustering" data-func="analyze" disabled>
+      <button class="btn-outline btn-export" type="button"><i class="fas fa-download"></i> 导出报告</button>
+      <button class="btn-primary btn-run" data-module="Clustering" data-func="analyze">
         <i class="fas fa-play"></i> 运行分析
       </button>
     </div>
@@ -103,19 +104,43 @@ window.MODULE_HTML = {
     <div class="param-grid">
       <div class="param-field">
         <label>算法</label>
-        <div class="fake-select">K-Means (Lloyd) <i class="fas fa-chevron-down"></i></div>
+        <select class="fake-select-control" data-param="algorithm">
+          <option value="kmeans" selected>K-Means</option>
+          <option value="hierarchical">Hierarchical</option>
+        </select>
+      </div>
+      <div class="param-field">
+        <label>Loss</label>
+        <select class="fake-select-control" data-param="loss">
+          <option value="lloyd" selected>lloyd</option>
+          <option value="elkan">elkan</option>
+        </select>
       </div>
       <div class="param-field">
         <label>簇数量 K</label>
-        <div class="fake-select">3 <i class="fas fa-chevron-down"></i></div>
+        <input class="fake-select-control" data-param="n_clusters" type="number" min="2" max="12" value="3">
       </div>
       <div class="param-field">
         <label>初始化方法</label>
-        <div class="fake-select">k-means++ <i class="fas fa-chevron-down"></i></div>
+        <select class="fake-select-control" data-param="init">
+          <option value="k-means++" selected>k-means++</option>
+          <option value="random">random</option>
+        </select>
       </div>
       <div class="param-field">
         <label>最大迭代</label>
-        <div class="fake-select">300 <i class="fas fa-chevron-down"></i></div>
+        <input class="fake-select-control" data-param="max_iter" type="number" min="50" max="2000" value="300">
+      </div>
+      <div class="param-field">
+        <label>Excel sheet 序号</label>
+        <input class="fake-select-control" data-param="sheet_selector" type="text" value="1" placeholder="例如: 1 或 1,3,5">
+      </div>
+      <div class="param-field">
+        <label>图形类型</label>
+        <select class="fake-select-control" data-param="plot_type">
+          <option value="scatter" selected>Scatter</option>
+          <option value="dendrogram">Dendrogram</option>
+        </select>
       </div>
     </div>
   </div>
@@ -124,7 +149,10 @@ window.MODULE_HTML = {
     <div class="chart-header">
       <h3><i class="fas fa-chart-pie" style="margin-right:8px; color:#1e4b6e;"></i>聚类散点图 (前两个主成分)</h3>
     </div>
-    <div class="chart-container"></div>
+    <div class="chart-container" style="min-height:240px;display:flex;align-items:center;justify-content:center;color:#7a8c9d;">
+      点击“运行分析”后在这里显示图形
+    </div>
+    <pre class="py-output" style="margin:12px 8px 0;padding:10px 12px;background:#f6f9fc;border:1px solid #e2eaf2;border-radius:8px;color:#3e5468;font-size:12px;white-space:pre-wrap;">等待运行...</pre>
   </div>
 
   <div class="metrics-row">
@@ -403,7 +431,371 @@ window.MODULE_HTML = {
         <i class="fas fa-file-code"></i> Clustering.py
         <span class="badge">Clustering</span>
       </div>
-      <pre class="python-code"><code><span style="color: #959077"># 此处存放聚类代码</span>
+      <pre class="python-code"><code><span style="color: #FF4689">import</span><span style="color: #F8F8F2"> io</span>
+<span style="color: #FF4689">import</span><span style="color: #F8F8F2"> json</span>
+<span style="color: #FF4689">import</span><span style="color: #F8F8F2"> os</span>
+<span style="color: #FF4689">from</span><span style="color: #F8F8F2"> typing </span><span style="color: #FF4689">import</span> <span style="color: #F8F8F2">Dict,</span> <span style="color: #F8F8F2">List,</span> <span style="color: #F8F8F2">Tuple</span>
+
+<span style="color: #FF4689">import</span><span style="color: #F8F8F2"> numpy </span><span style="color: #66D9EF">as</span><span style="color: #F8F8F2"> np</span>
+<span style="color: #FF4689">import</span><span style="color: #F8F8F2"> pandas </span><span style="color: #66D9EF">as</span><span style="color: #F8F8F2"> pd</span>
+<span style="color: #FF4689">import</span><span style="color: #F8F8F2"> matplotlib.pyplot </span><span style="color: #66D9EF">as</span><span style="color: #F8F8F2"> plt</span>
+<span style="color: #FF4689">from</span><span style="color: #F8F8F2"> scipy.cluster.hierarchy </span><span style="color: #FF4689">import</span> <span style="color: #F8F8F2">linkage,</span> <span style="color: #F8F8F2">fcluster,</span> <span style="color: #F8F8F2">dendrogram</span>
+<span style="color: #FF4689">from</span><span style="color: #F8F8F2"> sklearn.cluster </span><span style="color: #FF4689">import</span> <span style="color: #F8F8F2">KMeans</span>
+<span style="color: #FF4689">from</span><span style="color: #F8F8F2"> sklearn.metrics </span><span style="color: #FF4689">import</span> <span style="color: #F8F8F2">silhouette_score,</span> <span style="color: #F8F8F2">calinski_harabasz_score,</span> <span style="color: #F8F8F2">davies_bouldin_score</span>
+
+
+<span style="color: #F8F8F2">UPLOAD_NAME_PATH</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;/home/pyodide/upload_name.txt&quot;</span>
+<span style="color: #F8F8F2">UPLOAD_META_PATH</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;/home/pyodide/upload_meta.json&quot;</span>
+<span style="color: #F8F8F2">DATA_DIR</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;/home/pyodide&quot;</span>
+<span style="color: #F8F8F2">HIERARCHICAL_METHODS</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&quot;single&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;complete&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;average&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;centroid&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;median&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;ward&quot;</span><span style="color: #F8F8F2">]</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_read_numeric_data</span><span style="color: #F8F8F2">(sheet_name</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Tuple[pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame,</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray]:</span>
+    <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_load_uploaded_dataframe(sheet_name</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">sheet_name)</span>
+    <span style="color: #F8F8F2">num_df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">select_dtypes(include</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">[np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">number])</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">dropna(axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">num_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">empty:</span>
+        <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;未检测到可用于聚类的数值列，请上传包含数值列的 CSV/Excel。&quot;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">df,</span> <span style="color: #F8F8F2">num_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_numpy(dtype</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">float)</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_get_upload_meta</span><span style="color: #F8F8F2">()</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Tuple[str,</span> <span style="color: #F8F8F2">str]:</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">exists(UPLOAD_META_PATH):</span>
+        <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #F8F8F2">meta</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">json</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">loads(open(UPLOAD_META_PATH,</span> <span style="color: #E6DB74">&quot;r&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read())</span>
+            <span style="color: #F8F8F2">sheets</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">meta</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;sheets&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">[])</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">sheets:</span>
+                <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">sheets[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">][</span><span style="color: #E6DB74">&quot;path&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #E6DB74">&quot;csv&quot;</span>
+        <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #66D9EF">pass</span>
+
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">exists(UPLOAD_NAME_PATH):</span>
+        <span style="color: #66D9EF">with</span> <span style="color: #F8F8F2">open(UPLOAD_NAME_PATH,</span> <span style="color: #E6DB74">&quot;r&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">)</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">f:</span>
+            <span style="color: #F8F8F2">original_name</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">f</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span>
+        <span style="color: #F8F8F2">ext</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">(original_name</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">split(</span><span style="color: #E6DB74">&quot;.&quot;</span><span style="color: #F8F8F2">)[</span><span style="color: #FF4689">-</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]</span> <span style="color: #66D9EF">if</span> <span style="color: #E6DB74">&quot;.&quot;</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">original_name</span> <span style="color: #66D9EF">else</span> <span style="color: #E6DB74">&quot;csv&quot;</span><span style="color: #F8F8F2">)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">lower()</span>
+        <span style="color: #F8F8F2">path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">join(DATA_DIR,</span> <span style="color: #E6DB74">f&quot;data.{</span><span style="color: #F8F8F2">ext</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">join(DATA_DIR,</span> <span style="color: #E6DB74">&quot;data.csv&quot;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">ext</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;csv&quot;</span>
+
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">exists(path):</span>
+        <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;未检测到上传文件，请先上传 CSV/Excel 文件。&quot;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">path,</span> <span style="color: #F8F8F2">ext</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_load_uploaded_dataframe</span><span style="color: #F8F8F2">(sheet_name</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame:</span>
+    <span style="color: #F8F8F2">path,</span> <span style="color: #F8F8F2">ext</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_get_upload_meta()</span>
+
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">enc</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;utf-8-sig&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;gbk&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;gb18030&quot;</span><span style="color: #F8F8F2">):</span>
+        <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(path,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">enc,</span> <span style="color: #F8F8F2">sep</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">None</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">engine</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;python&quot;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #66D9EF">continue</span>
+
+    <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;CSV 解析失败，请检查编码/分隔符，或改存为 UTF-8 CSV 后重试。&quot;</span><span style="color: #F8F8F2">)</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_standardize</span><span style="color: #F8F8F2">(x:</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray:</span>
+    <span style="color: #F8F8F2">mean</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">x</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">mean(axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">keepdims</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">True</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">std</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">x</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">std(axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">keepdims</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">True</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">std[std</span> <span style="color: #FF4689">==</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">1.0</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">(x</span> <span style="color: #FF4689">-</span> <span style="color: #F8F8F2">mean)</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">std</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_pca2</span><span style="color: #F8F8F2">(x:</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray:</span>
+    <span style="color: #F8F8F2">x0</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">x</span> <span style="color: #FF4689">-</span> <span style="color: #F8F8F2">x</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">mean(axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">keepdims</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">True</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">cov</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">cov(x0,</span> <span style="color: #F8F8F2">rowvar</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">False</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">eigvals,</span> <span style="color: #F8F8F2">eigvecs</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">linalg</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">eigh(cov)</span>
+    <span style="color: #F8F8F2">order</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">argsort(eigvals)[::</span><span style="color: #FF4689">-</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]</span>
+    <span style="color: #F8F8F2">pc</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">eigvecs[:,</span> <span style="color: #F8F8F2">order[:</span><span style="color: #AE81FF">2</span><span style="color: #F8F8F2">]]</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">x0</span> <span style="color: #FF4689">@</span> <span style="color: #F8F8F2">pc</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_svg_scatter</span><span style="color: #F8F8F2">(points2d:</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray,</span> <span style="color: #F8F8F2">labels:</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray,</span> <span style="color: #F8F8F2">title:</span> <span style="color: #F8F8F2">str)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">str:</span>
+    <span style="color: #F8F8F2">fig,</span> <span style="color: #F8F8F2">ax</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">subplots(figsize</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">(</span><span style="color: #AE81FF">8</span><span style="color: #F8F8F2">,</span> <span style="color: #AE81FF">5</span><span style="color: #F8F8F2">))</span>
+    <span style="color: #F8F8F2">unique</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">unique(labels)</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">k</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">unique:</span>
+        <span style="color: #F8F8F2">idx</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">labels</span> <span style="color: #FF4689">==</span> <span style="color: #F8F8F2">k</span>
+        <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">scatter(points2d[idx,</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">points2d[idx,</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">s</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">36</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">alpha</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0.85</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">label</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">f&quot;Cluster {</span><span style="color: #F8F8F2">int(k)</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_title(title)</span>
+    <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xlabel(</span><span style="color: #E6DB74">&quot;PC1&quot;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_ylabel(</span><span style="color: #E6DB74">&quot;PC2&quot;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">legend(loc</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;best&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">8</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">grid(alpha</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0.2</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">buf</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">io</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">BytesIO()</span>
+    <span style="color: #F8F8F2">fig</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">tight_layout()</span>
+    <span style="color: #F8F8F2">fig</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">savefig(buf,</span> <span style="color: #F8F8F2">format</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;svg&quot;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">close(fig)</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">buf</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">getvalue()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">decode(</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">)</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_svg_dendrogram</span><span style="color: #F8F8F2">(z:</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray,</span> <span style="color: #F8F8F2">title:</span> <span style="color: #F8F8F2">str)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">str:</span>
+    <span style="color: #F8F8F2">fig,</span> <span style="color: #F8F8F2">ax</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">subplots(figsize</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">(</span><span style="color: #AE81FF">9</span><span style="color: #F8F8F2">,</span> <span style="color: #AE81FF">5</span><span style="color: #F8F8F2">))</span>
+    <span style="color: #F8F8F2">dendrogram(z,</span> <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">ax,</span> <span style="color: #F8F8F2">leaf_rotation</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">leaf_font_size</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">10</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_title(title)</span>
+    <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xlabel(</span><span style="color: #E6DB74">&quot;Samples&quot;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_ylabel(</span><span style="color: #E6DB74">&quot;Distance&quot;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">buf</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">io</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">BytesIO()</span>
+    <span style="color: #F8F8F2">fig</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">tight_layout()</span>
+    <span style="color: #F8F8F2">fig</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">savefig(buf,</span> <span style="color: #F8F8F2">format</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;svg&quot;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">close(fig)</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">buf</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">getvalue()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">decode(</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">)</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_safe_metrics</span><span style="color: #F8F8F2">(x:</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray,</span> <span style="color: #F8F8F2">labels:</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Dict[str,</span> <span style="color: #F8F8F2">str]:</span>
+    <span style="color: #F8F8F2">unique</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">unique(labels)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">unique</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">size</span> <span style="color: #FF4689">&lt;</span> <span style="color: #AE81FF">2</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
+            <span style="color: #E6DB74">&quot;silhouette&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;N/A&quot;</span><span style="color: #F8F8F2">,</span>
+            <span style="color: #E6DB74">&quot;ch&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;N/A&quot;</span><span style="color: #F8F8F2">,</span>
+            <span style="color: #E6DB74">&quot;db&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;N/A&quot;</span><span style="color: #F8F8F2">,</span>
+            <span style="color: #E6DB74">&quot;inertia&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;N/A&quot;</span><span style="color: #F8F8F2">,</span>
+        <span style="color: #F8F8F2">}</span>
+    <span style="color: #F8F8F2">sil</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">silhouette_score(x,</span> <span style="color: #F8F8F2">labels)</span>
+    <span style="color: #F8F8F2">ch</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">calinski_harabasz_score(x,</span> <span style="color: #F8F8F2">labels)</span>
+    <span style="color: #F8F8F2">db</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">davies_bouldin_score(x,</span> <span style="color: #F8F8F2">labels)</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
+        <span style="color: #E6DB74">&quot;silhouette&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">sil</span><span style="color: #E6DB74">:.4f}&quot;</span><span style="color: #F8F8F2">,</span>
+        <span style="color: #E6DB74">&quot;ch&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">ch</span><span style="color: #E6DB74">:.2f}&quot;</span><span style="color: #F8F8F2">,</span>
+        <span style="color: #E6DB74">&quot;db&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">db</span><span style="color: #E6DB74">:.4f}&quot;</span><span style="color: #F8F8F2">,</span>
+        <span style="color: #E6DB74">&quot;inertia&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;N/A&quot;</span><span style="color: #F8F8F2">,</span>
+    <span style="color: #F8F8F2">}</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_kmeans_fit</span><span style="color: #F8F8F2">(</span>
+    <span style="color: #F8F8F2">x_std:</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray,</span>
+    <span style="color: #F8F8F2">n_clusters:</span> <span style="color: #F8F8F2">int</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">3</span><span style="color: #F8F8F2">,</span>
+    <span style="color: #F8F8F2">init:</span> <span style="color: #F8F8F2">str</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;k-means++&quot;</span><span style="color: #F8F8F2">,</span>
+    <span style="color: #F8F8F2">max_iter:</span> <span style="color: #F8F8F2">int</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">300</span><span style="color: #F8F8F2">,</span>
+    <span style="color: #F8F8F2">algorithm:</span> <span style="color: #F8F8F2">str</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;lloyd&quot;</span><span style="color: #F8F8F2">,</span>
+    <span style="color: #F8F8F2">random_state:</span> <span style="color: #F8F8F2">int</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">42</span><span style="color: #F8F8F2">,</span>
+<span style="color: #F8F8F2">):</span>
+    <span style="color: #F8F8F2">model</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">KMeans(</span>
+        <span style="color: #F8F8F2">n_clusters</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">n_clusters,</span>
+        <span style="color: #F8F8F2">init</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">init,</span>
+        <span style="color: #F8F8F2">max_iter</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">max_iter,</span>
+        <span style="color: #F8F8F2">algorithm</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">algorithm,</span>
+        <span style="color: #F8F8F2">random_state</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">random_state,</span>
+        <span style="color: #F8F8F2">n_init</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">10</span><span style="color: #F8F8F2">,</span>
+    <span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">labels</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">model</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">fit_predict(x_std)</span>
+    <span style="color: #F8F8F2">centers</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">model</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">cluster_centers_</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">model,</span> <span style="color: #F8F8F2">labels,</span> <span style="color: #F8F8F2">centers</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_cluster_table_from_centers</span><span style="color: #F8F8F2">(labels:</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray,</span> <span style="color: #F8F8F2">centers:</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Tuple[List[str],</span> <span style="color: #F8F8F2">List[List[str]]]:</span>
+    <span style="color: #F8F8F2">header</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&quot;簇&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;样本数&quot;</span><span style="color: #F8F8F2">]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&quot;中心{</span><span style="color: #F8F8F2">i </span><span style="color: #FF4689">+</span><span style="color: #F8F8F2"> </span><span style="color: #AE81FF">1</span><span style="color: #E6DB74">}&quot;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(centers</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">shape[</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">])]</span>
+    <span style="color: #F8F8F2">rows:</span> <span style="color: #F8F8F2">List[List[str]]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">cid</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(centers</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">shape[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]):</span>
+        <span style="color: #F8F8F2">count</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">int(np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum(labels</span> <span style="color: #FF4689">==</span> <span style="color: #F8F8F2">cid))</span>
+        <span style="color: #F8F8F2">row</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[str(cid</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">),</span> <span style="color: #F8F8F2">str(count)]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">v</span><span style="color: #E6DB74">:.4f}&quot;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">v</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">centers[cid]]</span>
+        <span style="color: #F8F8F2">rows</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(row)</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">header,</span> <span style="color: #F8F8F2">rows</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">analyze</span><span style="color: #F8F8F2">(</span>
+    <span style="color: #F8F8F2">options</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">None</span><span style="color: #F8F8F2">,</span>
+    <span style="color: #F8F8F2">algorithm:</span> <span style="color: #F8F8F2">str</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;kmeans&quot;</span><span style="color: #F8F8F2">,</span>
+    <span style="color: #F8F8F2">n_clusters:</span> <span style="color: #F8F8F2">int</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">3</span><span style="color: #F8F8F2">,</span>
+    <span style="color: #F8F8F2">init:</span> <span style="color: #F8F8F2">str</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;k-means++&quot;</span><span style="color: #F8F8F2">,</span>
+    <span style="color: #F8F8F2">max_iter:</span> <span style="color: #F8F8F2">int</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">300</span><span style="color: #F8F8F2">,</span>
+<span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Dict[str,</span> <span style="color: #F8F8F2">object]:</span>
+<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;前端默认入口：支持 KMeans 与系统聚类。</span>
+
+<span style="color: #E6DB74">    优先兼容 README 推荐的 analyze(options: dict) 形式。</span>
+<span style="color: #E6DB74">    &quot;&quot;&quot;</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">options</span> <span style="color: #FF4689">is</span> <span style="color: #FF4689">not</span> <span style="color: #66D9EF">None</span> <span style="color: #FF4689">and</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">isinstance(options,</span> <span style="color: #F8F8F2">dict):</span>
+        <span style="color: #F8F8F2">to_py</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">getattr(options,</span> <span style="color: #E6DB74">&quot;to_py&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">callable(to_py):</span>
+            <span style="color: #F8F8F2">options</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">to_py()</span>
+
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">isinstance(options,</span> <span style="color: #F8F8F2">dict):</span>
+        <span style="color: #F8F8F2">algorithm</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;algorithm&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">algorithm)</span>
+        <span style="color: #F8F8F2">n_clusters</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;n_clusters&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">n_clusters)</span>
+        <span style="color: #F8F8F2">init</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;init&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">init)</span>
+        <span style="color: #F8F8F2">max_iter</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;max_iter&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">max_iter)</span>
+        <span style="color: #F8F8F2">loss</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">str(options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;loss&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;lloyd&quot;</span><span style="color: #F8F8F2">))</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">lower()</span>
+        <span style="color: #F8F8F2">plot_type</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">str(options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;plot_type&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;scatter&quot;</span><span style="color: #F8F8F2">))</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">lower()</span>
+    <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">loss</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;lloyd&quot;</span>
+        <span style="color: #F8F8F2">plot_type</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;scatter&quot;</span>
+
+    <span style="color: #F8F8F2">sheet_selector</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;&quot;</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">isinstance(options,</span> <span style="color: #F8F8F2">dict):</span>
+        <span style="color: #F8F8F2">sheet_selector</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">str(options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;sheet_selector&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;&quot;</span><span style="color: #F8F8F2">))</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span>
+
+    <span style="color: #F8F8F2">dataset_list</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_prepare_datasets(sheet_selector)</span>
+    <span style="color: #F8F8F2">n_clusters</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">max(</span><span style="color: #AE81FF">2</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">int(n_clusters))</span>
+    <span style="color: #F8F8F2">max_iter</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">max(</span><span style="color: #AE81FF">10</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">int(max_iter))</span>
+    <span style="color: #F8F8F2">algorithm</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">str(algorithm)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">lower()</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">algorithm</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&quot;kmeans&quot;</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">plot_type</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;scatter&quot;</span>
+
+    <span style="color: #F8F8F2">svgs:</span> <span style="color: #F8F8F2">List[str]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+    <span style="color: #F8F8F2">summary_rows:</span> <span style="color: #F8F8F2">List[List[str]]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+    <span style="color: #F8F8F2">metrics_first:</span> <span style="color: #F8F8F2">Dict[str,</span> <span style="color: #F8F8F2">str]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;silhouette&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;--&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;ch&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;--&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;db&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;--&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;inertia&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;--&quot;</span><span style="color: #F8F8F2">}</span>
+    <span style="color: #F8F8F2">detail_header:</span> <span style="color: #F8F8F2">List[str]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+    <span style="color: #F8F8F2">detail_rows:</span> <span style="color: #F8F8F2">List[List[str]]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+    <span style="color: #F8F8F2">kmeans_rows_raw:</span> <span style="color: #F8F8F2">List[Tuple[str,</span> <span style="color: #F8F8F2">int,</span> <span style="color: #F8F8F2">int,</span> <span style="color: #F8F8F2">List[float]]]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+    <span style="color: #F8F8F2">kmeans_max_dim</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">0</span>
+
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">idx,</span> <span style="color: #F8F8F2">(sheet_label,</span> <span style="color: #F8F8F2">x)</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">enumerate(dataset_list):</span>
+        <span style="color: #F8F8F2">x_std</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_standardize(x)</span>
+        <span style="color: #F8F8F2">x2</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_pca2(x_std)</span>
+
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">algorithm</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&quot;kmeans&quot;</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #F8F8F2">km_algo</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">loss</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">loss</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;lloyd&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;elkan&quot;</span><span style="color: #F8F8F2">}</span> <span style="color: #66D9EF">else</span> <span style="color: #E6DB74">&quot;lloyd&quot;</span>
+            <span style="color: #F8F8F2">model,</span> <span style="color: #F8F8F2">labels,</span> <span style="color: #F8F8F2">centers</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_kmeans_fit(</span>
+                <span style="color: #F8F8F2">x_std,</span>
+                <span style="color: #F8F8F2">n_clusters</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">n_clusters,</span>
+                <span style="color: #F8F8F2">init</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">init,</span>
+                <span style="color: #F8F8F2">max_iter</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">max_iter,</span>
+                <span style="color: #F8F8F2">algorithm</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">km_algo,</span>
+            <span style="color: #F8F8F2">)</span>
+            <span style="color: #F8F8F2">metrics</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_safe_metrics(x_std,</span> <span style="color: #F8F8F2">labels)</span>
+            <span style="color: #F8F8F2">metrics[</span><span style="color: #E6DB74">&quot;inertia&quot;</span><span style="color: #F8F8F2">]</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">model</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">inertia_</span><span style="color: #E6DB74">:.4f}&quot;</span>
+            <span style="color: #F8F8F2">svgs</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(_svg_scatter(x2,</span> <span style="color: #F8F8F2">labels</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">sheet_label</span><span style="color: #E6DB74">} - KMeans Clustering (K={</span><span style="color: #F8F8F2">n_clusters</span><span style="color: #E6DB74">})&quot;</span><span style="color: #F8F8F2">))</span>
+            <span style="color: #F8F8F2">summary_rows</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append([sheet_label,</span> <span style="color: #F8F8F2">metrics[</span><span style="color: #E6DB74">&quot;silhouette&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">metrics[</span><span style="color: #E6DB74">&quot;ch&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">metrics[</span><span style="color: #E6DB74">&quot;db&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">metrics[</span><span style="color: #E6DB74">&quot;inertia&quot;</span><span style="color: #F8F8F2">]])</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">idx</span> <span style="color: #FF4689">==</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #F8F8F2">metrics_first</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">metrics</span>
+            <span style="color: #F8F8F2">kmeans_max_dim</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">max(kmeans_max_dim,</span> <span style="color: #F8F8F2">centers</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">shape[</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">])</span>
+            <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">cid</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(centers</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">shape[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]):</span>
+                <span style="color: #F8F8F2">count</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">int(np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum(labels</span> <span style="color: #FF4689">==</span> <span style="color: #F8F8F2">cid))</span>
+                <span style="color: #F8F8F2">kmeans_rows_raw</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append((sheet_label,</span> <span style="color: #F8F8F2">cid</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">count,</span> <span style="color: #F8F8F2">[float(v)</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">v</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">centers[cid]]))</span>
+            <span style="color: #66D9EF">continue</span>
+
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">algorithm</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&quot;hierarchical&quot;</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #F8F8F2">method</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">loss</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">loss</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">HIERARCHICAL_METHODS</span> <span style="color: #66D9EF">else</span> <span style="color: #E6DB74">&quot;ward&quot;</span>
+            <span style="color: #F8F8F2">z</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">linkage(x_std,</span> <span style="color: #F8F8F2">method</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">method)</span>
+            <span style="color: #F8F8F2">labels</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">fcluster(z,</span> <span style="color: #F8F8F2">t</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">n_clusters,</span> <span style="color: #F8F8F2">criterion</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;maxclust&quot;</span><span style="color: #F8F8F2">)</span>
+            <span style="color: #F8F8F2">metrics</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_safe_metrics(x_std,</span> <span style="color: #F8F8F2">labels)</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">plot_type</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&quot;dendrogram&quot;</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #F8F8F2">svgs</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(_svg_dendrogram(z,</span> <span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">sheet_label</span><span style="color: #E6DB74">} - Dendrogram ({</span><span style="color: #F8F8F2">method</span><span style="color: #E6DB74">})&quot;</span><span style="color: #F8F8F2">))</span>
+            <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #F8F8F2">svgs</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(_svg_scatter(x2,</span> <span style="color: #F8F8F2">labels,</span> <span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">sheet_label</span><span style="color: #E6DB74">} - Hierarchical Clustering ({</span><span style="color: #F8F8F2">method</span><span style="color: #E6DB74">}) (K={</span><span style="color: #F8F8F2">n_clusters</span><span style="color: #E6DB74">})&quot;</span><span style="color: #F8F8F2">))</span>
+            <span style="color: #F8F8F2">summary_rows</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append([sheet_label,</span> <span style="color: #F8F8F2">metrics[</span><span style="color: #E6DB74">&quot;silhouette&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">metrics[</span><span style="color: #E6DB74">&quot;ch&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">metrics[</span><span style="color: #E6DB74">&quot;db&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #E6DB74">&quot;N/A&quot;</span><span style="color: #F8F8F2">])</span>
+            <span style="color: #F8F8F2">counts</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[int(np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum(labels</span> <span style="color: #FF4689">==</span> <span style="color: #F8F8F2">k))</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">k</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">sorted(np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">unique(labels))]</span>
+            <span style="color: #F8F8F2">rows</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[[method,</span> <span style="color: #F8F8F2">str(i</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">),</span> <span style="color: #F8F8F2">str(c)]</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i,</span> <span style="color: #F8F8F2">c</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">enumerate(counts)]</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">idx</span> <span style="color: #FF4689">==</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #F8F8F2">metrics_first</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">metrics</span>
+                <span style="color: #F8F8F2">detail_header</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&quot;sheet&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;方法&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;簇编号&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;样本数&quot;</span><span style="color: #F8F8F2">]</span>
+            <span style="color: #F8F8F2">detail_rows</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">extend([[sheet_label]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">r</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">r</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">rows])</span>
+            <span style="color: #66D9EF">continue</span>
+
+        <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;未知算法: {</span><span style="color: #F8F8F2">algorithm</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span>
+
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">algorithm</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&quot;kmeans&quot;</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">detail_header</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&quot;sheet&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;簇&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;样本数&quot;</span><span style="color: #F8F8F2">]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&quot;中心{</span><span style="color: #F8F8F2">i </span><span style="color: #FF4689">+</span><span style="color: #F8F8F2"> </span><span style="color: #AE81FF">1</span><span style="color: #E6DB74">}&quot;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(kmeans_max_dim)]</span>
+        <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">sheet_label,</span> <span style="color: #F8F8F2">cluster_id,</span> <span style="color: #F8F8F2">sample_count,</span> <span style="color: #F8F8F2">center_vals</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">kmeans_rows_raw:</span>
+            <span style="color: #F8F8F2">center_strs</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">v</span><span style="color: #E6DB74">:.4f}&quot;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">v</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">center_vals]</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">len(center_strs)</span> <span style="color: #FF4689">&lt;</span> <span style="color: #F8F8F2">kmeans_max_dim:</span>
+                <span style="color: #F8F8F2">center_strs</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">extend([</span><span style="color: #E6DB74">&quot;&quot;</span><span style="color: #F8F8F2">]</span> <span style="color: #FF4689">*</span> <span style="color: #F8F8F2">(kmeans_max_dim</span> <span style="color: #FF4689">-</span> <span style="color: #F8F8F2">len(center_strs)))</span>
+            <span style="color: #F8F8F2">detail_rows</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append([sheet_label,</span> <span style="color: #F8F8F2">str(cluster_id),</span> <span style="color: #F8F8F2">str(sample_count)]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">center_strs)</span>
+
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
+        <span style="color: #E6DB74">&quot;svg&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">svgs[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">svgs</span> <span style="color: #66D9EF">else</span> <span style="color: #E6DB74">&quot;&quot;</span><span style="color: #F8F8F2">,</span>
+        <span style="color: #E6DB74">&quot;svgs&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">svgs,</span>
+        <span style="color: #E6DB74">&quot;metrics&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">metrics_first,</span>
+        <span style="color: #E6DB74">&quot;table_header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">detail_header</span> <span style="color: #FF4689">or</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&quot;sheet&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;信息&quot;</span><span style="color: #F8F8F2">],</span>
+        <span style="color: #E6DB74">&quot;table&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">detail_rows</span> <span style="color: #FF4689">or</span> <span style="color: #F8F8F2">[[</span><span style="color: #E6DB74">&quot;-&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;无结果&quot;</span><span style="color: #F8F8F2">]],</span>
+        <span style="color: #E6DB74">&quot;summary_header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&quot;sheet&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;轮廓系数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;CH 指数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;DB 指数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;簇内平方和&quot;</span><span style="color: #F8F8F2">],</span>
+        <span style="color: #E6DB74">&quot;summary_table&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">summary_rows,</span>
+    <span style="color: #F8F8F2">}</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_prepare_datasets</span><span style="color: #F8F8F2">(sheet_selector:</span> <span style="color: #F8F8F2">str)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">List[Tuple[str,</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray]]:</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">exists(UPLOAD_META_PATH):</span>
+        <span style="color: #F8F8F2">_,</span> <span style="color: #F8F8F2">x</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_numeric_data()</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">[(</span><span style="color: #E6DB74">&quot;sheet1&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">x)]</span>
+    <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">meta</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">json</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">loads(open(UPLOAD_META_PATH,</span> <span style="color: #E6DB74">&quot;r&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read())</span>
+    <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">e:</span>
+        <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;上传元信息读取失败: {</span><span style="color: #F8F8F2">e</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">from</span><span style="color: #F8F8F2"> e</span>
+    <span style="color: #F8F8F2">sheets</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">meta</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;sheets&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">[])</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">sheets:</span>
+        <span style="color: #F8F8F2">_,</span> <span style="color: #F8F8F2">x</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_numeric_data()</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">[(</span><span style="color: #E6DB74">&quot;sheet1&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">x)]</span>
+    <span style="color: #F8F8F2">names</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[s</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;name&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">f&quot;sheet{</span><span style="color: #F8F8F2">s</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;index&#39;</span><span style="color: #F8F8F2">, i</span><span style="color: #FF4689">+</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i,</span> <span style="color: #F8F8F2">s</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">enumerate(sheets)]</span>
+
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">sheet_selector:</span>
+        <span style="color: #F8F8F2">chosen_idx</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span>
+    <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">chosen_idx</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+        <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">token</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">sheet_selector</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">split(</span><span style="color: #E6DB74">&quot;,&quot;</span><span style="color: #F8F8F2">):</span>
+            <span style="color: #F8F8F2">t</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">token</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">t:</span>
+                <span style="color: #66D9EF">continue</span>
+            <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">int(t)</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">&lt;</span> <span style="color: #AE81FF">1</span> <span style="color: #FF4689">or</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">&gt;</span> <span style="color: #F8F8F2">len(sheets):</span>
+                <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;sheet 序号越界: {</span><span style="color: #F8F8F2">i</span><span style="color: #E6DB74">}，有效范围 1~{</span><span style="color: #F8F8F2">len(names)</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span>
+            <span style="color: #F8F8F2">chosen_idx</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(i</span> <span style="color: #FF4689">-</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">chosen_idx:</span>
+            <span style="color: #F8F8F2">chosen_idx</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span>
+
+    <span style="color: #F8F8F2">datasets:</span> <span style="color: #F8F8F2">List[Tuple[str,</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray]]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">chosen_idx:</span>
+        <span style="color: #F8F8F2">s</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">sheets[i]</span>
+        <span style="color: #F8F8F2">sname</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">s</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;name&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">f&quot;sheet{</span><span style="color: #F8F8F2">s</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;index&#39;</span><span style="color: #F8F8F2">, i</span><span style="color: #FF4689">+</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">s</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;path&quot;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">path:</span>
+            <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;sheet &#39;{</span><span style="color: #F8F8F2">sname</span><span style="color: #E6DB74">}&#39; 缺少 path 信息。&quot;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">None</span>
+        <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">enc</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;utf-8-sig&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;gbk&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;gb18030&quot;</span><span style="color: #F8F8F2">):</span>
+            <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(path,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">enc,</span> <span style="color: #F8F8F2">sep</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">None</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">engine</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;python&quot;</span><span style="color: #F8F8F2">)</span>
+                <span style="color: #66D9EF">break</span>
+            <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #66D9EF">continue</span>
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">is</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;sheet &#39;{</span><span style="color: #F8F8F2">sname</span><span style="color: #E6DB74">}&#39; CSV 解析失败。&quot;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">num_df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">select_dtypes(include</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">[np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">number])</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">dropna(axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">num_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">empty:</span>
+            <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;sheet &#39;{</span><span style="color: #F8F8F2">sname</span><span style="color: #E6DB74">}&#39; 未检测到可用于聚类的数值列。&quot;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">datasets</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append((sname,</span> <span style="color: #F8F8F2">num_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_numpy(dtype</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">float)))</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">datasets</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">hierarchical</span><span style="color: #F8F8F2">(method:</span> <span style="color: #F8F8F2">str</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;ward&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">n_clusters:</span> <span style="color: #F8F8F2">int</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">3</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Dict[str,</span> <span style="color: #F8F8F2">object]:</span>
+<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;系统聚类：single/complete/average/centroid/median/ward。&quot;&quot;&quot;</span>
+    <span style="color: #F8F8F2">method</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">method</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">lower()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">method</span> <span style="color: #FF4689">not</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">HIERARCHICAL_METHODS:</span>
+        <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;method 必须为 {</span><span style="color: #F8F8F2">HIERARCHICAL_METHODS</span><span style="color: #E6DB74">} 之一&quot;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">_,</span> <span style="color: #F8F8F2">x</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_numeric_data()</span>
+    <span style="color: #F8F8F2">x_std</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_standardize(x)</span>
+    <span style="color: #F8F8F2">x2</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_pca2(x_std)</span>
+    <span style="color: #F8F8F2">z</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">linkage(x_std,</span> <span style="color: #F8F8F2">method</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">method)</span>
+    <span style="color: #F8F8F2">labels</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">fcluster(z,</span> <span style="color: #F8F8F2">t</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">n_clusters,</span> <span style="color: #F8F8F2">criterion</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;maxclust&quot;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">metrics</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_safe_metrics(x_std,</span> <span style="color: #F8F8F2">labels)</span>
+    <span style="color: #F8F8F2">counts</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[int(np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum(labels</span> <span style="color: #FF4689">==</span> <span style="color: #F8F8F2">k))</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">k</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">sorted(np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">unique(labels))]</span>
+    <span style="color: #F8F8F2">header</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&quot;方法&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;簇编号&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;样本数&quot;</span><span style="color: #F8F8F2">]</span>
+    <span style="color: #F8F8F2">rows</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[[method,</span> <span style="color: #F8F8F2">str(i</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">),</span> <span style="color: #F8F8F2">str(c)]</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i,</span> <span style="color: #F8F8F2">c</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">enumerate(counts)]</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
+        <span style="color: #E6DB74">&quot;svg&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">_svg_scatter(x2,</span> <span style="color: #F8F8F2">labels,</span> <span style="color: #E6DB74">f&quot;系统聚类({</span><span style="color: #F8F8F2">method</span><span style="color: #E6DB74">}) 结果 (K={</span><span style="color: #F8F8F2">n_clusters</span><span style="color: #E6DB74">})&quot;</span><span style="color: #F8F8F2">),</span>
+        <span style="color: #E6DB74">&quot;metrics&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">metrics,</span>
+        <span style="color: #E6DB74">&quot;table_header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">header,</span>
+        <span style="color: #E6DB74">&quot;table&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">rows,</span>
+    <span style="color: #F8F8F2">}</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">analyze_all_methods</span><span style="color: #F8F8F2">(n_clusters:</span> <span style="color: #F8F8F2">int</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">3</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Dict[str,</span> <span style="color: #F8F8F2">object]:</span>
+<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;汇总 notebook 中全部聚类方法的指标。&quot;&quot;&quot;</span>
+    <span style="color: #F8F8F2">_,</span> <span style="color: #F8F8F2">x</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_numeric_data()</span>
+    <span style="color: #F8F8F2">x_std</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_standardize(x)</span>
+
+    <span style="color: #F8F8F2">results:</span> <span style="color: #F8F8F2">List[List[str]]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">method</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">HIERARCHICAL_METHODS:</span>
+        <span style="color: #F8F8F2">z</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">linkage(x_std,</span> <span style="color: #F8F8F2">method</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">method)</span>
+        <span style="color: #F8F8F2">labels</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">fcluster(z,</span> <span style="color: #F8F8F2">t</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">n_clusters,</span> <span style="color: #F8F8F2">criterion</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;maxclust&quot;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">m</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_safe_metrics(x_std,</span> <span style="color: #F8F8F2">labels)</span>
+        <span style="color: #F8F8F2">results</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append([method,</span> <span style="color: #F8F8F2">m[</span><span style="color: #E6DB74">&quot;silhouette&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">m[</span><span style="color: #E6DB74">&quot;ch&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">m[</span><span style="color: #E6DB74">&quot;db&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #E6DB74">&quot;N/A&quot;</span><span style="color: #F8F8F2">])</span>
+
+    <span style="color: #F8F8F2">km,</span> <span style="color: #F8F8F2">labels,</span> <span style="color: #F8F8F2">_</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_kmeans_fit(x_std,</span> <span style="color: #F8F8F2">n_clusters</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">n_clusters)</span>
+    <span style="color: #F8F8F2">m</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_safe_metrics(x_std,</span> <span style="color: #F8F8F2">labels)</span>
+    <span style="color: #F8F8F2">results</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append([</span><span style="color: #E6DB74">&quot;kmeans&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">m[</span><span style="color: #E6DB74">&quot;silhouette&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">m[</span><span style="color: #E6DB74">&quot;ch&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">m[</span><span style="color: #E6DB74">&quot;db&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">km</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">inertia_</span><span style="color: #E6DB74">:.4f}&quot;</span><span style="color: #F8F8F2">])</span>
+
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
+        <span style="color: #E6DB74">&quot;table_header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&quot;方法&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;轮廓系数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;CH 指数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;DB 指数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;簇内平方和&quot;</span><span style="color: #F8F8F2">],</span>
+        <span style="color: #E6DB74">&quot;table&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">results,</span>
+    <span style="color: #F8F8F2">}</span>
 </code></pre>
     </div>
     <div class="python-file-card">
@@ -535,7 +927,371 @@ window.MODULE_HTML = {
   </script>
 
   <script type="text/python-src" data-module="Clustering">
-# 此处存放聚类代码
+import io
+import json
+import os
+from typing import Dict, List, Tuple
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.cluster.hierarchy import linkage, fcluster, dendrogram
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+
+
+UPLOAD_NAME_PATH = "/home/pyodide/upload_name.txt"
+UPLOAD_META_PATH = "/home/pyodide/upload_meta.json"
+DATA_DIR = "/home/pyodide"
+HIERARCHICAL_METHODS = ["single", "complete", "average", "centroid", "median", "ward"]
+
+
+def _read_numeric_data(sheet_name=None) -> Tuple[pd.DataFrame, np.ndarray]:
+    df = _load_uploaded_dataframe(sheet_name=sheet_name)
+    num_df = df.select_dtypes(include=[np.number]).dropna(axis=0)
+    if num_df.empty:
+        raise ValueError("未检测到可用于聚类的数值列，请上传包含数值列的 CSV/Excel。")
+    return df, num_df.to_numpy(dtype=float)
+
+
+def _get_upload_meta() -> Tuple[str, str]:
+    if os.path.exists(UPLOAD_META_PATH):
+        try:
+            meta = json.loads(open(UPLOAD_META_PATH, "r", encoding="utf-8").read())
+            sheets = meta.get("sheets", [])
+            if sheets:
+                return sheets[0]["path"], "csv"
+        except Exception:
+            pass
+
+    if os.path.exists(UPLOAD_NAME_PATH):
+        with open(UPLOAD_NAME_PATH, "r", encoding="utf-8") as f:
+            original_name = f.read().strip()
+        ext = (original_name.split(".")[-1] if "." in original_name else "csv").lower()
+        path = os.path.join(DATA_DIR, f"data.{ext}")
+    else:
+        path = os.path.join(DATA_DIR, "data.csv")
+        ext = "csv"
+
+    if not os.path.exists(path):
+        raise ValueError("未检测到上传文件，请先上传 CSV/Excel 文件。")
+    return path, ext
+
+
+def _load_uploaded_dataframe(sheet_name=None) -> pd.DataFrame:
+    path, ext = _get_upload_meta()
+
+    for enc in ("utf-8", "utf-8-sig", "gbk", "gb18030"):
+        try:
+            return pd.read_csv(path, encoding=enc, sep=None, engine="python")
+        except Exception:
+            continue
+
+    raise ValueError("CSV 解析失败，请检查编码/分隔符，或改存为 UTF-8 CSV 后重试。")
+
+
+def _standardize(x: np.ndarray) -> np.ndarray:
+    mean = x.mean(axis=0, keepdims=True)
+    std = x.std(axis=0, keepdims=True)
+    std[std == 0] = 1.0
+    return (x - mean) / std
+
+
+def _pca2(x: np.ndarray) -> np.ndarray:
+    x0 = x - x.mean(axis=0, keepdims=True)
+    cov = np.cov(x0, rowvar=False)
+    eigvals, eigvecs = np.linalg.eigh(cov)
+    order = np.argsort(eigvals)[::-1]
+    pc = eigvecs[:, order[:2]]
+    return x0 @ pc
+
+
+def _svg_scatter(points2d: np.ndarray, labels: np.ndarray, title: str) -> str:
+    fig, ax = plt.subplots(figsize=(8, 5))
+    unique = np.unique(labels)
+    for k in unique:
+        idx = labels == k
+        ax.scatter(points2d[idx, 0], points2d[idx, 1], s=36, alpha=0.85, label=f"Cluster {int(k)}")
+    ax.set_title(title)
+    ax.set_xlabel("PC1")
+    ax.set_ylabel("PC2")
+    ax.legend(loc="best", fontsize=8)
+    ax.grid(alpha=0.2)
+    buf = io.BytesIO()
+    fig.tight_layout()
+    fig.savefig(buf, format="svg")
+    plt.close(fig)
+    return buf.getvalue().decode("utf-8")
+
+
+def _svg_dendrogram(z: np.ndarray, title: str) -> str:
+    fig, ax = plt.subplots(figsize=(9, 5))
+    dendrogram(z, ax=ax, leaf_rotation=0, leaf_font_size=10)
+    ax.set_title(title)
+    ax.set_xlabel("Samples")
+    ax.set_ylabel("Distance")
+    buf = io.BytesIO()
+    fig.tight_layout()
+    fig.savefig(buf, format="svg")
+    plt.close(fig)
+    return buf.getvalue().decode("utf-8")
+
+
+def _safe_metrics(x: np.ndarray, labels: np.ndarray) -> Dict[str, str]:
+    unique = np.unique(labels)
+    if unique.size < 2:
+        return {
+            "silhouette": "N/A",
+            "ch": "N/A",
+            "db": "N/A",
+            "inertia": "N/A",
+        }
+    sil = silhouette_score(x, labels)
+    ch = calinski_harabasz_score(x, labels)
+    db = davies_bouldin_score(x, labels)
+    return {
+        "silhouette": f"{sil:.4f}",
+        "ch": f"{ch:.2f}",
+        "db": f"{db:.4f}",
+        "inertia": "N/A",
+    }
+
+
+def _kmeans_fit(
+    x_std: np.ndarray,
+    n_clusters: int = 3,
+    init: str = "k-means++",
+    max_iter: int = 300,
+    algorithm: str = "lloyd",
+    random_state: int = 42,
+):
+    model = KMeans(
+        n_clusters=n_clusters,
+        init=init,
+        max_iter=max_iter,
+        algorithm=algorithm,
+        random_state=random_state,
+        n_init=10,
+    )
+    labels = model.fit_predict(x_std)
+    centers = model.cluster_centers_
+    return model, labels, centers
+
+
+def _cluster_table_from_centers(labels: np.ndarray, centers: np.ndarray) -> Tuple[List[str], List[List[str]]]:
+    header = ["簇", "样本数"] + [f"中心{i + 1}" for i in range(centers.shape[1])]
+    rows: List[List[str]] = []
+    for cid in range(centers.shape[0]):
+        count = int(np.sum(labels == cid))
+        row = [str(cid + 1), str(count)] + [f"{v:.4f}" for v in centers[cid]]
+        rows.append(row)
+    return header, rows
+
+
+def analyze(
+    options=None,
+    algorithm: str = "kmeans",
+    n_clusters: int = 3,
+    init: str = "k-means++",
+    max_iter: int = 300,
+) -> Dict[str, object]:
+    """前端默认入口：支持 KMeans 与系统聚类。
+
+    优先兼容 README 推荐的 analyze(options: dict) 形式。
+    """
+    if options is not None and not isinstance(options, dict):
+        to_py = getattr(options, "to_py", None)
+        if callable(to_py):
+            options = to_py()
+
+    if isinstance(options, dict):
+        algorithm = options.get("algorithm", algorithm)
+        n_clusters = options.get("n_clusters", n_clusters)
+        init = options.get("init", init)
+        max_iter = options.get("max_iter", max_iter)
+        loss = str(options.get("loss", "lloyd")).strip().lower()
+        plot_type = str(options.get("plot_type", "scatter")).strip().lower()
+    else:
+        loss = "lloyd"
+        plot_type = "scatter"
+
+    sheet_selector = ""
+    if isinstance(options, dict):
+        sheet_selector = str(options.get("sheet_selector", "")).strip()
+
+    dataset_list = _prepare_datasets(sheet_selector)
+    n_clusters = max(2, int(n_clusters))
+    max_iter = max(10, int(max_iter))
+    algorithm = str(algorithm).strip().lower()
+    if algorithm == "kmeans":
+        plot_type = "scatter"
+
+    svgs: List[str] = []
+    summary_rows: List[List[str]] = []
+    metrics_first: Dict[str, str] = {"silhouette": "--", "ch": "--", "db": "--", "inertia": "--"}
+    detail_header: List[str] = []
+    detail_rows: List[List[str]] = []
+    kmeans_rows_raw: List[Tuple[str, int, int, List[float]]] = []
+    kmeans_max_dim = 0
+
+    for idx, (sheet_label, x) in enumerate(dataset_list):
+        x_std = _standardize(x)
+        x2 = _pca2(x_std)
+
+        if algorithm == "kmeans":
+            km_algo = loss if loss in {"lloyd", "elkan"} else "lloyd"
+            model, labels, centers = _kmeans_fit(
+                x_std,
+                n_clusters=n_clusters,
+                init=init,
+                max_iter=max_iter,
+                algorithm=km_algo,
+            )
+            metrics = _safe_metrics(x_std, labels)
+            metrics["inertia"] = f"{model.inertia_:.4f}"
+            svgs.append(_svg_scatter(x2, labels + 1, f"{sheet_label} - KMeans Clustering (K={n_clusters})"))
+            summary_rows.append([sheet_label, metrics["silhouette"], metrics["ch"], metrics["db"], metrics["inertia"]])
+            if idx == 0:
+                metrics_first = metrics
+            kmeans_max_dim = max(kmeans_max_dim, centers.shape[1])
+            for cid in range(centers.shape[0]):
+                count = int(np.sum(labels == cid))
+                kmeans_rows_raw.append((sheet_label, cid + 1, count, [float(v) for v in centers[cid]]))
+            continue
+
+        if algorithm == "hierarchical":
+            method = loss if loss in HIERARCHICAL_METHODS else "ward"
+            z = linkage(x_std, method=method)
+            labels = fcluster(z, t=n_clusters, criterion="maxclust")
+            metrics = _safe_metrics(x_std, labels)
+            if plot_type == "dendrogram":
+                svgs.append(_svg_dendrogram(z, f"{sheet_label} - Dendrogram ({method})"))
+            else:
+                svgs.append(_svg_scatter(x2, labels, f"{sheet_label} - Hierarchical Clustering ({method}) (K={n_clusters})"))
+            summary_rows.append([sheet_label, metrics["silhouette"], metrics["ch"], metrics["db"], "N/A"])
+            counts = [int(np.sum(labels == k)) for k in sorted(np.unique(labels))]
+            rows = [[method, str(i + 1), str(c)] for i, c in enumerate(counts)]
+            if idx == 0:
+                metrics_first = metrics
+                detail_header = ["sheet", "方法", "簇编号", "样本数"]
+            detail_rows.extend([[sheet_label] + r for r in rows])
+            continue
+
+        raise ValueError(f"未知算法: {algorithm}")
+
+    if algorithm == "kmeans":
+        detail_header = ["sheet", "簇", "样本数"] + [f"中心{i + 1}" for i in range(kmeans_max_dim)]
+        for sheet_label, cluster_id, sample_count, center_vals in kmeans_rows_raw:
+            center_strs = [f"{v:.4f}" for v in center_vals]
+            if len(center_strs) < kmeans_max_dim:
+                center_strs.extend([""] * (kmeans_max_dim - len(center_strs)))
+            detail_rows.append([sheet_label, str(cluster_id), str(sample_count)] + center_strs)
+
+    return {
+        "svg": svgs[0] if svgs else "",
+        "svgs": svgs,
+        "metrics": metrics_first,
+        "table_header": detail_header or ["sheet", "信息"],
+        "table": detail_rows or [["-", "无结果"]],
+        "summary_header": ["sheet", "轮廓系数", "CH 指数", "DB 指数", "簇内平方和"],
+        "summary_table": summary_rows,
+    }
+
+
+def _prepare_datasets(sheet_selector: str) -> List[Tuple[str, np.ndarray]]:
+    if not os.path.exists(UPLOAD_META_PATH):
+        _, x = _read_numeric_data()
+        return [("sheet1", x)]
+    try:
+        meta = json.loads(open(UPLOAD_META_PATH, "r", encoding="utf-8").read())
+    except Exception as e:
+        raise ValueError(f"上传元信息读取失败: {e}") from e
+    sheets = meta.get("sheets", [])
+    if not sheets:
+        _, x = _read_numeric_data()
+        return [("sheet1", x)]
+    names = [s.get("name", f"sheet{s.get('index', i+1)}") for i, s in enumerate(sheets)]
+
+    if not sheet_selector:
+        chosen_idx = [0]
+    else:
+        chosen_idx = []
+        for token in sheet_selector.split(","):
+            t = token.strip()
+            if not t:
+                continue
+            i = int(t)
+            if i < 1 or i > len(sheets):
+                raise ValueError(f"sheet 序号越界: {i}，有效范围 1~{len(names)}")
+            chosen_idx.append(i - 1)
+        if not chosen_idx:
+            chosen_idx = [0]
+
+    datasets: List[Tuple[str, np.ndarray]] = []
+    for i in chosen_idx:
+        s = sheets[i]
+        sname = s.get("name", f"sheet{s.get('index', i+1)}")
+        path = s.get("path")
+        if not path:
+            raise ValueError(f"sheet '{sname}' 缺少 path 信息。")
+        df = None
+        for enc in ("utf-8", "utf-8-sig", "gbk", "gb18030"):
+            try:
+                df = pd.read_csv(path, encoding=enc, sep=None, engine="python")
+                break
+            except Exception:
+                continue
+        if df is None:
+            raise ValueError(f"sheet '{sname}' CSV 解析失败。")
+        num_df = df.select_dtypes(include=[np.number]).dropna(axis=0)
+        if num_df.empty:
+            raise ValueError(f"sheet '{sname}' 未检测到可用于聚类的数值列。")
+        datasets.append((sname, num_df.to_numpy(dtype=float)))
+    return datasets
+
+
+def hierarchical(method: str = "ward", n_clusters: int = 3) -> Dict[str, object]:
+    """系统聚类：single/complete/average/centroid/median/ward。"""
+    method = method.lower().strip()
+    if method not in HIERARCHICAL_METHODS:
+        raise ValueError(f"method 必须为 {HIERARCHICAL_METHODS} 之一")
+    _, x = _read_numeric_data()
+    x_std = _standardize(x)
+    x2 = _pca2(x_std)
+    z = linkage(x_std, method=method)
+    labels = fcluster(z, t=n_clusters, criterion="maxclust")
+    metrics = _safe_metrics(x_std, labels)
+    counts = [int(np.sum(labels == k)) for k in sorted(np.unique(labels))]
+    header = ["方法", "簇编号", "样本数"]
+    rows = [[method, str(i + 1), str(c)] for i, c in enumerate(counts)]
+    return {
+        "svg": _svg_scatter(x2, labels, f"系统聚类({method}) 结果 (K={n_clusters})"),
+        "metrics": metrics,
+        "table_header": header,
+        "table": rows,
+    }
+
+
+def analyze_all_methods(n_clusters: int = 3) -> Dict[str, object]:
+    """汇总 notebook 中全部聚类方法的指标。"""
+    _, x = _read_numeric_data()
+    x_std = _standardize(x)
+
+    results: List[List[str]] = []
+    for method in HIERARCHICAL_METHODS:
+        z = linkage(x_std, method=method)
+        labels = fcluster(z, t=n_clusters, criterion="maxclust")
+        m = _safe_metrics(x_std, labels)
+        results.append([method, m["silhouette"], m["ch"], m["db"], "N/A"])
+
+    km, labels, _ = _kmeans_fit(x_std, n_clusters=n_clusters)
+    m = _safe_metrics(x_std, labels)
+    results.append(["kmeans", m["silhouette"], m["ch"], m["db"], f"{km.inertia_:.4f}"])
+
+    return {
+        "table_header": ["方法", "轮廓系数", "CH 指数", "DB 指数", "簇内平方和"],
+        "table": results,
+    }
 
   </script>
 

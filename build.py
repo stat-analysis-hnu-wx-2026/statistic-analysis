@@ -2,6 +2,7 @@ import os
 import glob
 import shutil
 import re
+import json
 import html as html_module
 
 try:
@@ -86,6 +87,27 @@ def build_html_modules():
     return f'<script>\nwindow.MODULE_HTML = {{\n{body}\n}}\n</script>'
 
 
+def build_nav_menu():
+    cfg_path = os.path.join(ROOT, "modules.json")
+    data = json.loads(read_file(cfg_path))
+    items = data.get("nav", [])
+    parts = []
+    for item in items:
+        itype = item.get("type", "button")
+        if itype == "divider":
+            parts.append('        <div class="nav-divider"></div>')
+            continue
+        icon = item.get("icon", "fas fa-circle")
+        label = item.get("label", "")
+        module = item.get("module")
+        active = " active" if item.get("active") else ""
+        if module:
+            parts.append(f'        <button class="nav-item{active}" data-module="{module}"><i class="{icon}"></i> {label}</button>')
+        else:
+            parts.append(f'        <button class="nav-item{active}"><i class="{icon}"></i> {label}</button>')
+    return "\n".join(parts)
+
+
 def copy_static():
     for name in ('css', 'js'):
         src = os.path.join(ROOT, name)
@@ -158,6 +180,7 @@ def main():
 
     mod_block = build_html_modules()
     html = html.replace('<!--BUILD_MODULES-->', mod_block)
+    html = html.replace('<!--BUILD_NAV-->', build_nav_menu())
 
     with open(output, 'w', encoding='utf-8') as f:
         f.write(html)

@@ -1,0 +1,17 @@
+{
+  "nav": [
+    {"type": "button", "module": "clustering", "icon": "fas fa-layer-group", "label": "聚类分析", "active": true},
+    {"type": "button", "module": "visualization", "icon": "fas fa-flask", "label": "可视化"},
+    {"type": "button", "module": "statistics", "icon": "fas fa-chart-bar", "label": "统计评价"},
+    {"type": "button", "module": "pca", "icon": "fas fa-arrow-down-wide-short", "label": "主成分分析"},
+    {"type": "button", "module": "factor", "icon": "fas fa-cube", "label": "因子分析"},
+    {"type": "button", "module": "correspondence", "icon": "fas fa-arrows-left-right", "label": "对应分析"},
+    {"type": "button", "module": "regression", "icon": "fas fa-chart-line", "label": "相关与回归"},
+    {"type": "button", "module": "canonical", "icon": "fas fa-link", "label": "典型相关"},
+    {"type": "button", "module": "extended", "icon": "fas fa-plus-minus", "label": "扩展线性"},
+    {"type": "divider"},
+    {"type": "button", "module": "python", "icon": "fas fa-code", "label": "Python 代码"},
+    {"type": "button", "icon": "fas fa-history", "label": "历史记录"},
+    {"type": "button", "module": "test", "icon": "fas fa-plus-minus", "label": "测试"}
+  ]
+}
