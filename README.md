@@ -7,11 +7,11 @@
 - **无服务器架构** — 浏览器即运行时，Python 代码在 Pyodide 沙箱内运行
 
 ---
-## 架构总览
+## 一：架构总览
 
 ```
-┌─ 浏览器 JS ───────────────────────────────────────────────────────┐
-│                                                                    │
+┌─ 浏览器 JS ────────────────────────────────────────────────────────┐
+│                                                                   │
 │  html/modules/xxx.html          js/bridge.js                      │
 │  ┌──────────────────────┐      ┌─────────────────────┐            │
 │  │ data-param="alpha"   │ ──→  │ collectParams() →   │            │
@@ -35,7 +35,7 @@
 │  │                                                       │        │
 │  │  def analyze(options):                                │        │
 │  │      # 1. 读虚拟文件系统                                │        │
-│  │      meta = json.load(open("/home/pyodide/upload_meta"))│        │
+│  │      meta = json.load(open("/home/pyodide/upload_meta"))│       │
 │  │      df = pd.read_csv(meta["sheets"][0]["path"])       │        │
 │  │                                                        │        │
 │  │      # 2. 取参数                                        │        │
@@ -83,18 +83,20 @@
 
 ---
 
-## 项目结构
+## 二：项目结构
 
 ```
 .
+├── run_localhost.py       # 启动一个localhost服务器
 ├── build.py               # 构建脚本
 ├── requirements.txt       # Python 构建依赖
+├── modules.json           # 存放导航栏与python文件加载顺序
 ├── .gitignore
 ├── README.md
 │
 ├── html/
 │   ├── index.html         # 模板（含 <!--BUILD_*--> 占位符）
-│   └── modules/           # 功能模块的 HTML 片段（10 个）
+│   └── modules/           # 功能模块的 HTML 片段
 │       ├── clustering.html
 │       ├── visualization.html
 │       ├── test.html
@@ -108,7 +110,7 @@
 │   ├── navigation.js      # 模块切换导航
 │   └── bridge.js          # 文件上传 + Python↔JS 通信桥
 │
-├── python/                # Python 源码（11 个文件）
+├── python/                # Python 源码
 │   ├── test.py            # Pyodide 功能测试
 │   ├── Clustering.py      # 聚类分析
 │   ├── Pca.py             # 主成分分析
@@ -131,11 +133,12 @@
 
 注意：
 
+- **如果你不想了解具体机制**，那么请直接看[[#四：如何编写一个模块]]和[[#构建]]
 - 如果你把代码放错位置了，比如把html代码放到了python目录下，**那么是不会有任何效果的**
-- 除非你想要引入多线程等特性，否则不必关心服务器等事宜
+- 除非你想要引入多线程等特性，否则不必操心服务器等事宜
 
 ___
-## 文件上传与虚拟文件系统
+## 三：文件上传与虚拟文件系统
 
 Pyodide 在 WASM 内存中模拟了一个文件系统（Emscripten FS）。上传文件的流程：
 
@@ -167,7 +170,7 @@ def analyze(options):
 
 ---
 
-## 如何编写一个模块
+## 四：如何编写一个模块
 
 添加一个新模块只需三步：**写 Python、写 HTML、注册**。不需要碰 CSS 或 JS（除非你觉得默认样式不好看，想要自定义css）。
 
@@ -434,8 +437,8 @@ def pca(options):
 
 
 ```html
-%% 该文件位于html/modules/pca.html %%
-%% 在遵循上述规范要求的前提下，是不需要额外编写js代码的。css代码也不用编写——除非你觉得默认样式不好看，那么可以让ai加上。 %%
+%% 该文件位于html/modules/pca.html
+在遵循上述规范要求的前提下，是不需要额外编写js代码的。css代码也不用编写——除非你觉得默认样式不好看。%%
 <div class="module-content" id="pca">
   <div class="page-header">
     <div class="header-left">
@@ -514,7 +517,7 @@ def pca(options):
 ```
 
 ___
-## 参数收集机制
+## 五：参数收集机制
 
 `bridge.js` 的 `collectParams(container)` 函数自动扫描模块容器内的所有 `[data-param]` 元素：
 
@@ -544,19 +547,19 @@ function collectParams(container) {
 
 ---
 
-## Python 返回值与渲染映射
+## 六：Python 返回值与渲染映射
 
 `renderModuleResult()` 根据返回值的 key 名，将数据填充到 HTML 的对应位置。
 
 ### 返回值的键与 DOM 映射
 
-| 返回键 | 类型 | 渲染目标 | 说明 |
-|--------|------|----------|------|
-| `error` | string | `.py-output` + `.chart-container` | 显示错误信息，渲染终止 |
-| `svgs` | string[] | `.chart-container` | 多个 SVG 从上到下排列 |
-| `svg` | string | `.chart-container` | 单个 SVG（`svgs` 优先） |
-| `metrics` | object | `.metric-value` 元素 | 按 `Object.values()` 顺序填充 |
-| `tables` | object[] | `.simple-table` 元素 | 按 DOM 顺序填充，每一项 `{header: string[], rows: string[][]}` |
+| 返回键       | 类型       | 渲染目标                              | 说明                                                    |
+| --------- | -------- | --------------------------------- | ----------------------------------------------------- |
+| `error`   | string   | `.py-output` + `.chart-container` | 显示错误信息，渲染终止                                           |
+| `svgs`    | string[] | `.chart-container`                | 多个 SVG 从上到下排列                                         |
+| `svg`     | string   | `.chart-container`                | 单个 SVG（`svgs` 优先）                                     |
+| `metrics` | object   | `.metric-value` 元素                | 按 `Object.values()` 顺序填充                              |
+| `tables`  | object[] | `.simple-table` 元素                | 按 DOM 顺序填充，每一项 `{header: string[], rows: string[][]}` |
 
 ### 典型返回值示例
 
@@ -579,7 +582,7 @@ return {
     "tables": [{"header": ["统计指标", "值"], "rows": ...}],
 }
 
-# 错误返回
+# 返回错误
 return {"error": "数据包含非数值列，请检查上传文件"}
 ```
 
@@ -606,7 +609,7 @@ svg_str = buf.getvalue().decode()  # ← 这是字符串，不是文件
 
 ---
 
-## print 输出与错误处理
+## 七：print 输出与错误处理
 
 ### print 捕获
 
@@ -645,7 +648,7 @@ if (out.result.error) {
 
 ---
 
-## 模块开发工作流
+## 八：模块开发工作流
 
 ```bash
 # 1. 在 python/ 下新建 .py 文件
@@ -668,9 +671,11 @@ python run_localhost.py
 
 ---
 
-## 构建与部署
+## 九：构建与部署
 
 ### 构建
+
+安装python依赖，然后运行`build.py`
 
 ```bash
 pip install -r requirements.txt
@@ -679,7 +684,7 @@ python build.py
 
 构建产物在 `build/` 目录：
 - `index.html` — 标准版本（引用外部 CSS/JS）
-- `index.inline.html` — **单文件版本**（CSS/JS 全部内联，推荐部署）
+- `index.inline.html` — 单文件版本（CSS/JS 全部内联）
 
 ### 构建过程
 
@@ -706,15 +711,17 @@ python run_localhost.py --build-only
 python run_localhost.py --port 5173
 ```
 
-Pyodide 需要通过 HTTP 访问（不能直接双击 HTML 文件），因为浏览器安全策略要求 Web Worker 和 WASM 通过 HTTP(S) 加载。
+大部分情况下，双击`build/index.inline.html`或者`build/index.html`可以正常运行。如果遇到无法运行的情况，可以尝试启动服务器，并使用浏览器打开对应端口。默认情况下，需要把[http://127.0.0.1:8000]()输入到浏览器中。如果你指定了端口，比如5173，那么就打开[http://127.0.0.1:5173]()
+
+如果遇到卡顿，迟迟加载不出来，可以考虑刷新/等一会/更换网络。
 
 ### 部署
 
-将 `build/index.inline.html` 部署到任意静态服务器（Cloudflare Pages、GitHub Pages、Netlify、Nginx 等），单文件即可工作，无需其他资源。
+将 `build/index.inline.html` 部署到任意静态服务器，即可工作，无需其他资源。该部分已经由前端组完成了。点击[StatCore - 多元统计分析](https://statistic-analysis.netlify.app/)可查看效果。
 
 ---
 
-## 依赖
+## 十：依赖
 
 | 依赖                                      | 用途                | 类型           |
 | --------------------------------------- | ----------------- | ------------ |
@@ -728,7 +735,7 @@ Pyodide 需要通过 HTTP 访问（不能直接双击 HTML 文件），因为浏
 | scikit                                  | 机器学习              | Pyodide 自动加载 |
 # 最后
 
-编写模块后，可以在浏览器上跑一跑，确认效果与自己的预期相同。如果想要方便地提交代码/接收更新，请前往github，确认自己有一个github账号，且电脑安装了git，知道git基本知识。然后，运行
+编写模块后，可以在浏览器上跑一跑，确认效果与自己的预期相同。如果想要方便地提交代码/接收更新，请前往github，确认自己有一个github账号，且电脑安装了git，了解基本用法。然后，运行
 
 ```bash
 git clone https://github.com/stat-analysis-hnu-wx-2026/statistic-analysis
@@ -736,4 +743,4 @@ git clone https://github.com/stat-analysis-hnu-wx-2026/statistic-analysis
 
 为了推送更新，可以加入`stat-analysis-hnu-wx-2026`这个临时组织。
 
-如果不想使用git，请确认效果无误后，将两份文件：python代码，html代码（可以空着，不过实际上拿着代码要求ai写出对应的html，把这份文件也甩给ai，ai就可以给出很好的效果）打包发送给前端组。
+如果不想使用git，请确认效果无误后，将两份文件：python代码，html代码（可以空着，不过实际上拿着代码要求ai写出对应的html，把这份文件也甩给ai，ai就可以给出很好的效果）打包发送给前端组。如果你修改了更多的文件，那么把那些文件一并打包，并注明修改了第几行到第几行。
