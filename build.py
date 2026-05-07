@@ -21,11 +21,43 @@ def read_file(path):
     with open(path, encoding='utf-8') as f:
         return f.read()
 
+def get_ordered_python_files():
+    """返回按指定顺序排序的 Python 文件路径列表"""
+    pattern = os.path.join(ROOT, 'python', '*.py')
+    all_files = glob.glob(pattern)
+    # 获取文件名（不含扩展名）到完整路径的映射
+    name_to_path = {os.path.splitext(os.path.basename(f))[0]: f for f in all_files}
+    
+    # 尝试读取顺序配置
+    cfg_path = os.path.join(ROOT, "modules.json")
+    order = []
+    if os.path.exists(cfg_path):
+        try:
+            data = json.loads(read_file(cfg_path))
+            order = data.get("python_order", [])
+        except:
+            pass
+    
+    if not order:
+        # 没有配置顺序，按文件名排序返回
+        return sorted(all_files)
+    
+    # 按指定顺序构造列表，未列出的文件按字母序追加
+    ordered_files = []
+    for name in order:
+        if name in name_to_path:
+            ordered_files.append(name_to_path.pop(name))
+        else:
+            print(f'  [warn] python_order 中指定的 "{name}" 不存在，已跳过')
+    
+    # 剩余未列出的文件按字母序追加
+    remaining = sorted(name_to_path.values())
+    ordered_files.extend(remaining)
+    return ordered_files
 
 def build_python_blocks():
     parts = []
-    pattern = os.path.join(ROOT, 'python', '*.py')
-    for fpath in sorted(glob.glob(pattern)):
+    for fpath in get_ordered_python_files():
         name = os.path.splitext(os.path.basename(fpath))[0]
         content = read_file(fpath)
         tag = f'  <script type="text/python-src" data-module="{name}">\n{content}\n  </script>'
@@ -34,12 +66,10 @@ def build_python_blocks():
 
 
 def build_python_viewer_content():
-    pattern = os.path.join(ROOT, 'python', '*.py')
-    files = sorted(glob.glob(pattern))
+    files = get_ordered_python_files()
     if HAVE_PYGMENTS:
         lexer = PythonLexer()
         formatter = HtmlFormatter(style='monokai', nowrap=True, noclasses=True)
-
     cards = []
     for fpath in files:
         name = os.path.splitext(os.path.basename(fpath))[0]

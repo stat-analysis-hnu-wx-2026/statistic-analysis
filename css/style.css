@@ -645,6 +645,41 @@ body {
   margin-top: 2px;
 }
 
+.eval-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.eval-tab {
+  padding: 10px 24px;
+  border-radius: 30px;
+  font-weight: 500;
+  font-size: 14px;
+  color: #3e5060;
+  background: #f0f4f9;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.eval-tab:hover {
+  background: #e0e8f2;
+}
+
+.eval-tab.active {
+  background: #2a5c8a;
+  color: white;
+}
+
+.eval-panel {
+  display: none;
+}
+
+.eval-panel.active {
+  display: block;
+}
+
 .python-files {
   display: flex;
   flex-direction: column;

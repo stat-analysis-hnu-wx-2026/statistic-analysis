@@ -11,6 +11,62 @@
   <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .sheet-selector {
+      background: #f8fafd;
+      border: 1px solid #eef1f5;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 28px;
+    }
+    .sheet-selector-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: #3a4a5a;
+      margin-bottom: 10px;
+    }
+    .sheet-selector-title i {
+      color: #2a5c8a;
+      margin-right: 6px;
+    }
+    .sheet-options {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .sheet-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #3e5060;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .sheet-option:hover {
+      background: #e7f0fa;
+    }
+    .sheet-option input[type="radio"] {
+      accent-color: #2a5c8a;
+    }
+    .btn-confirm-sheet {
+      margin-top: 10px;
+      width: 100%;
+      padding: 8px;
+      background: #2a5c8a;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-confirm-sheet:hover {
+      background: #1e4b6e;
+    }
+  </style>
 </head>
 <body>
   <div class="app">
@@ -35,6 +91,12 @@
           </div>
           <div class="drop-hint">支持 CSV、Excel 文件</div>
         </div>
+      </div>
+
+      <div id="sheetSelector" class="sheet-selector" style="display:none;">
+        <div class="sheet-selector-title"><i class="fas fa-file-excel"></i> 选择要导入的工作表</div>
+        <div id="sheetOptions" class="sheet-options"></div>
+        <button id="confirmSheet" class="btn-confirm-sheet">确认导入</button>
       </div>
 
       <nav class="nav-menu">

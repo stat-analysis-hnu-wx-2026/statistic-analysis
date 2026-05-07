@@ -1,11 +1,74 @@
 <div class="module-content" id="pca">
   <div class="page-header">
-    <div class="header-left"><h1>主成分分析</h1><div class="breadcrumb"><i class="fas fa-folder-open"></i> 降维 / PCA</div></div>
+    <div class="header-left">
+      <h1>主成分分析 · PCA</h1>
+      <div class="breadcrumb"><i class="fas fa-folder-open"></i> 降维 / PCA / 方差解释</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary btn-run" data-module="Pca" data-func="pca" disabled>
+        <i class="fas fa-play"></i> 运行分析
+      </button>
+    </div>
   </div>
-  <div class="module-placeholder">
-    <div class="placeholder-icon"><i class="fas fa-arrow-down-wide-short"></i></div>
-    <h2>主成分分析模块</h2>
-    <p>该模块正在开发中，将通过 Pyodide 执行 Python 实现。</p>
-    <ul><li>主成分提取</li><li>方差解释</li><li>降维可视化</li></ul>
+
+  <div class="param-card">
+    <div class="param-title"><i class="fas fa-sliders-h" style="color:#2a5c8a;"></i> 分析参数</div>
+    <div class="param-grid">
+      <div class="param-field">
+        <label>主成分个数</label>
+        <input type="number" data-param="n_components" min="2" max="20" placeholder="自动"
+               style="background:#f9fbfd;border:1px solid #d6e0ea;border-radius:40px;padding:10px 18px;font-size:14px;width:140px;text-align:center;">
+      </div>
+    </div>
+    <p style="color:#738fa0; margin-top:10px; font-size:12px;">留空自动选择（最多 6 个）。请先在左侧上传数据文件。</p>
+  </div>
+
+  <div class="metrics-row">
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-hashtag"></i> 样本数</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-list"></i> 变量数</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-cubes"></i> 主成分数</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-chart-pie"></i> 累积方差</div>
+      <div class="metric-value">--</div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-header">
+      <h3><i class="fas fa-chart-bar" style="margin-right:8px; color:#1e4b6e;"></i>方差解释 + 降维可视化</h3>
+    </div>
+    <div class="chart-container" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+    </div>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> 载荷矩阵</span>
+      <span class="badge">变量在各主成分上的权重</span>
+    </div>
+    <table class="simple-table">
+      <thead><tr><th>变量</th><th>PC1</th><th>PC2</th><th>PC3</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> 样本得分</span>
+      <span class="badge">各样本的主成分得分</span>
+    </div>
+    <table class="scores-table simple-table">
+      <thead><tr><th>样本</th><th>PC1</th><th>PC2</th><th>PC3</th></tr></thead>
+      <tbody></tbody>
+    </table>
   </div>
 </div>

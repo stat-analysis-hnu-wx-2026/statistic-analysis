@@ -26,6 +26,9 @@ function initUpload() {
 
 function handleUpload(file) {
   if (!pyodide) return
+  const sheetSel = document.getElementById('sheetSelector')
+  if (sheetSel) sheetSel.style.display = 'none'
+  document.getElementById('confirmSheet').onclick = null
   const reader = new FileReader()
   reader.onload = () => {
     const ext = (file.name.split('.').pop() || 'csv').toLowerCase()
@@ -34,30 +37,7 @@ function handleUpload(file) {
         throw new Error('Excel 解析库加载失败，请刷新后重试。')
       }
       const wb = window.XLSX.read(reader.result, { type: 'array' })
-      const meta = { original_name: file.name, ext, sheets: [] }
-      wb.SheetNames.forEach((sheetName, idx) => {
-        const ws = wb.Sheets[sheetName]
-        const csv = window.XLSX.utils.sheet_to_csv(ws)
-        const path = `/home/pyodide/data.sheet${idx + 1}.csv`
-        pyodide.FS.writeFile(path, csv)
-        meta.sheets.push({ index: idx + 1, name: sheetName, path })
-      })
-      pyodide.FS.writeFile('/home/pyodide/upload_meta.json', JSON.stringify(meta))
-      pyodide.FS.writeFile('/home/pyodide/upload_name.txt', file.name)
-      window.latestUploadPayload = {
-        kind: 'excel',
-        originalName: file.name,
-        ext,
-        sheets: wb.SheetNames.map((sheetName, idx) => {
-          const ws = wb.Sheets[sheetName]
-          return {
-            index: idx + 1,
-            name: sheetName,
-            path: `/home/pyodide/data.sheet${idx + 1}.csv`,
-            csv: window.XLSX.utils.sheet_to_csv(ws)
-          }
-        })
-      }
+      showSheetSelector(file.name, wb)
     } else {
       const vfsPath = `/home/pyodide/data.${ext}`
       const bytes = new Uint8Array(reader.result)
@@ -76,15 +56,71 @@ function handleUpload(file) {
         path: vfsPath,
         bytes: reader.result,
       }
+      if (typeof window.ensureClusteringWorker === 'function') {
+        window.ensureClusteringWorker()
+          .then(() => window.callClusteringWorker?.('upload', window.latestUploadPayload))
+          .catch(err => console.error('Failed to upload dataset to clustering worker:', err))
+      }
+      showUploadSuccess(file.name, file.size)
     }
-    if (typeof window.ensureClusteringWorker === 'function') {
-      window.ensureClusteringWorker()
-        .then(() => window.callClusteringWorker?.('upload', window.latestUploadPayload))
-        .catch(err => console.error('Failed to upload dataset to clustering worker:', err))
-    }
-    showUploadSuccess(file.name, file.size)
   }
   reader.readAsArrayBuffer(file)
+}
+
+function showSheetSelector(originalName, wb) {
+  const sheetOptions = document.getElementById('sheetOptions')
+  sheetOptions.innerHTML = wb.SheetNames.map((name, i) => `
+    <label class="sheet-option">
+      <input type="radio" name="selectedSheet" value="${i}" ${i === 0 ? 'checked' : ''}>
+      ${name}
+    </label>
+  `).join('')
+  const sheetSel = document.getElementById('sheetSelector')
+  sheetSel.style.display = 'block'
+  window._pendingExcel = { originalName, wb }
+
+  document.getElementById('confirmSheet').onclick = confirmSheetSelection
+}
+
+function confirmSheetSelection() {
+  const selected = document.querySelector('input[name="selectedSheet"]:checked')
+  if (!selected) return
+  const idx = parseInt(selected.value)
+  const { originalName, wb } = window._pendingExcel
+  const sheetName = wb.SheetNames[idx]
+  const ws = wb.Sheets[sheetName]
+  const csv = window.XLSX.utils.sheet_to_csv(ws)
+
+  const baseName = originalName.replace(/\.[^.]+$/, '')
+  const csvFileName = `${baseName}.${sheetName}.csv`
+  const path = `/home/pyodide/${csvFileName}`
+
+  pyodide.FS.writeFile(path, csv)
+
+  const meta = {
+    original_name: originalName,
+    ext: 'xlsx',
+    sheets: [{ index: 1, name: sheetName, path }]
+  }
+  pyodide.FS.writeFile('/home/pyodide/upload_meta.json', JSON.stringify(meta))
+  pyodide.FS.writeFile('/home/pyodide/upload_name.txt', originalName)
+
+  window.latestUploadPayload = {
+    kind: 'excel',
+    originalName,
+    ext: 'xlsx',
+    sheets: [{ index: 1, name: sheetName, path, csv }]
+  }
+
+  document.getElementById('sheetSelector').style.display = 'none'
+  delete window._pendingExcel
+
+  if (typeof window.ensureClusteringWorker === 'function') {
+    window.ensureClusteringWorker()
+      .then(() => window.callClusteringWorker?.('upload', window.latestUploadPayload))
+      .catch(err => console.error('Failed to upload dataset to clustering worker:', err))
+  }
+  showUploadSuccess(originalName, 0)
 }
 
 function showUploadSuccess(name, size) {
@@ -113,6 +149,9 @@ function resetUpload() {
       </div>
       <div class="drop-hint">支持 CSV、Excel 文件</div>
     </div>`
+  const sheetSel = document.getElementById('sheetSelector')
+  if (sheetSel) sheetSel.style.display = 'none'
+  delete window._pendingExcel
   initUpload()
 }
 
@@ -153,6 +192,13 @@ function renderModuleResult(container, out) {
     return
   }
 
+  if (out.result.error) {
+    if (outputPre) outputPre.textContent = '错误: ' + out.result.error
+    const chartBox2 = container.querySelector('.chart-container')
+    if (chartBox2) chartBox2.innerHTML = `<div style="color:#c0392b;font-size:13px;">${out.result.error}</div>`
+    return
+  }
+
   const chartBox = container.querySelector('.chart-container')
   if (chartBox && out.result.svgs && out.result.svgs.length) {
     chartBox.innerHTML = out.result.svgs.map((svg, i) => `
@@ -188,6 +234,30 @@ function renderModuleResult(container, out) {
     headerRow.innerHTML = out.result.table_header.map(h => `<th>${h}</th>`).join('')
   }
 
+  const scoresTbody = container.querySelector('.scores-table tbody')
+  if (scoresTbody && out.result.scores_table) {
+    scoresTbody.innerHTML = out.result.scores_table.map(
+      row => `<tr>${row.map(c => `<td>${c}</td>`).join('')}</tr>`
+    ).join('')
+  }
+
+  const scoresHeader = container.querySelector('.scores-table thead tr')
+  if (scoresHeader && out.result.scores_header) {
+    scoresHeader.innerHTML = out.result.scores_header.map(h => `<th>${h}</th>`).join('')
+  }
+
+  const anovaTbody = container.querySelector('.anova-table tbody')
+  if (anovaTbody && out.result.anova_table) {
+    anovaTbody.innerHTML = out.result.anova_table.map(
+      row => `<tr>${row.map(c => `<td>${c}</td>`).join('')}</tr>`
+    ).join('')
+  }
+
+  const anovaHeader = container.querySelector('.anova-table thead tr')
+  if (anovaHeader && out.result.anova_table_header) {
+    anovaHeader.innerHTML = out.result.anova_table_header.map(h => `<th>${h}</th>`).join('')
+  }
+
   if (outputPre && out.result.summary_table && out.result.summary_table.length) {
     const lines = out.result.summary_table.map(r => r.join(' | '))
     outputPre.textContent = `各 sheet 指标:\n${lines.join('\n')}`
@@ -198,9 +268,12 @@ function collectParams(container) {
   const params = {}
   container.querySelectorAll('[data-param]').forEach(el => {
     const key = el.dataset.param
-    let val = el.value
-    if (el.type === 'number') val = Number(val)
-    params[key] = val
+    if (el.type === 'number') {
+      const v = el.value.trim()
+      params[key] = v === '' ? null : Number(v)
+    } else {
+      params[key] = el.value
+    }
   })
   return params
 }
@@ -317,6 +390,15 @@ function initClusteringParamControls(container) {
   updateLossOptions()
 }
 
+function switchEvalTab(tabId, btn) {
+  const container = btn.closest('.module-content')
+  container.querySelectorAll('.eval-tab').forEach(b => b.classList.remove('active'))
+  btn.classList.add('active')
+  container.querySelectorAll('.eval-panel').forEach(p => p.classList.remove('active'))
+  const panel = container.querySelector('#panel-' + tabId)
+  if (panel) panel.classList.add('active')
+}
+
 // --- run button handler (callable multiple times) ---
 function bindRunButtons() {
   document.querySelectorAll('.btn-run:not([data-bound])').forEach(btn => {
@@ -327,7 +409,8 @@ function bindRunButtons() {
       const mod = btn.dataset.module
       const func = btn.dataset.func
       const container = btn.closest('.module-content')
-      const outputPre = container.querySelector('.py-output')
+      const scope = btn.closest('.eval-panel') || container
+      const outputPre = scope.querySelector('.py-output')
       initClusteringParamControls(container)
 
       if (!window.pyodideReady) {
@@ -371,15 +454,15 @@ function bindRunButtons() {
       if (outputPre) outputPre.textContent = '运行中...'
 
       try {
-        const params = collectParams(container)
+        const params = collectParams(scope)
         const out = await captureStdout(mod, func, params)
         if (btn.dataset.canceled !== 'true' && btn.dataset.runId === runId) {
-          renderModuleResult(container, out)
+          renderModuleResult(scope, out)
         }
       } catch (e) {
         if (btn.dataset.canceled !== 'true' && btn.dataset.runId === runId) {
           if (outputPre) outputPre.textContent = `错误: ${e.message}`
-          const chartBox = container.querySelector('.chart-container')
+          const chartBox = scope.querySelector('.chart-container')
           if (chartBox) {
             chartBox.innerHTML = `<div style="color:#c0392b;font-size:13px;">运行失败：${e.message}</div>`
           }

@@ -13,5 +13,20 @@
     {"type": "button", "module": "python", "icon": "fas fa-code", "label": "Python 代码"},
     {"type": "button", "icon": "fas fa-history", "label": "历史记录"},
     {"type": "button", "module": "test", "icon": "fas fa-plus-minus", "label": "测试"}
+  ],
+  "python_order": [
+    "DataClean", 
+    "CanonicalCorrelation", 
+    "Clustering",
+    "CorrelationRegression",
+    "Correspondence",
+    "Evaluation",
+    "ExtendedLinear",
+    "Factor",
+    "File",
+    "Pca",
+    "Visualization",
+    "test"
   ]
+
 }
