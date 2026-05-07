@@ -1,104 +1,4 @@
 let pyodide = null
-let clusteringWorker = null
-let clusteringWorkerReady = false
-let clusteringWorkerInitPromise = null
-let clusteringWorkerSeq = 0
-const clusteringWorkerPending = new Map()
-
-function collectPythonSources() {
-  const sources = {}
-  document.querySelectorAll('script[type="text/python-src"]').forEach(script => {
-    if (script.dataset.module) sources[script.dataset.module] = script.textContent
-  })
-  return sources
-}
-
-function rejectClusteringWorkerPending(message = '聚类分析已中断。') {
-  clusteringWorkerPending.forEach(({ reject }) => reject(new Error(message)))
-  clusteringWorkerPending.clear()
-}
-
-function teardownClusteringWorker(message) {
-  if (clusteringWorker) clusteringWorker.terminate()
-  clusteringWorker = null
-  clusteringWorkerReady = false
-  clusteringWorkerInitPromise = null
-  if (message) rejectClusteringWorkerPending(message)
-}
-
-function callClusteringWorker(type, payload = {}) {
-  if (!clusteringWorker) return Promise.reject(new Error('聚类分析引擎未启动。'))
-  const requestId = `cw-${Date.now()}-${++clusteringWorkerSeq}`
-  return new Promise((resolve, reject) => {
-    clusteringWorkerPending.set(requestId, { resolve, reject })
-    clusteringWorker.postMessage({ type, requestId, payload })
-  })
-}
-
-function syncUploadToClusteringWorker() {
-  if (!window.latestUploadPayload || !clusteringWorkerReady) return Promise.resolve()
-  return callClusteringWorker('upload', window.latestUploadPayload).catch(err => {
-    console.error('Failed to sync upload to clustering worker:', err)
-  })
-}
-
-function ensureClusteringWorker() {
-  if (!window.Worker) {
-    return Promise.reject(new Error('当前浏览器不支持 Worker，无法中断聚类任务。'))
-  }
-  if (clusteringWorkerReady && clusteringWorker) return Promise.resolve()
-  if (clusteringWorkerInitPromise) return clusteringWorkerInitPromise
-
-  clusteringWorkerInitPromise = new Promise((resolve, reject) => {
-    clusteringWorker = new Worker('js/py-worker.js')
-
-    clusteringWorker.onmessage = event => {
-      const { type, requestId, payload, error } = event.data || {}
-
-      if (type === 'ready') {
-        clusteringWorkerReady = true
-        clusteringWorkerInitPromise = null
-        syncUploadToClusteringWorker().finally(() => {
-          document.dispatchEvent(new Event('clusteringWorkerReady'))
-          resolve()
-        })
-        return
-      }
-
-      if (!requestId) return
-      const pending = clusteringWorkerPending.get(requestId)
-      if (!pending) return
-      clusteringWorkerPending.delete(requestId)
-
-      if (type === 'success') pending.resolve(payload)
-      else pending.reject(new Error(error || '聚类分析引擎返回未知错误。'))
-    }
-
-    clusteringWorker.onerror = event => {
-      const msg = event?.message || '聚类分析引擎初始化失败。'
-      teardownClusteringWorker(msg)
-      reject(new Error(msg))
-    }
-
-    clusteringWorker.postMessage({
-      type: 'init',
-      payload: {
-        pythonSources: collectPythonSources(),
-      }
-    })
-  })
-
-  return clusteringWorkerInitPromise
-}
-
-function interruptClusteringWorker() {
-  teardownClusteringWorker('聚类分析已中断。')
-}
-
-window.ensureClusteringWorker = ensureClusteringWorker
-window.callClusteringWorker = callClusteringWorker
-window.interruptClusteringWorker = interruptClusteringWorker
-window.isClusteringWorkerReady = () => clusteringWorkerReady
 
 function setPyStatus(html, pct) {
   const el = document.querySelector('.py-status')
@@ -168,9 +68,6 @@ async function initPyodide() {
     setPyStatus('<i class="fas fa-check-circle" style="color:#2e7d32;"></i> Pyodide 已就绪', 100)
     document.querySelectorAll('.btn-run').forEach(b => { b.disabled = false })
     document.dispatchEvent(new Event('pyodideReady'))
-    ensureClusteringWorker().catch(err => {
-      console.error('Failed to warm up clustering worker:', err)
-    })
   } catch (e) {
     setPyStatus('<i class="fas fa-times-circle" style="color:#c0392b;"></i> 加载失败')
     console.error(e)

@@ -194,10 +194,6 @@ window.MODULE_HTML = {
         <input class="fake-select-control" data-param="max_iter" type="number" min="50" max="2000" value="300">
       </div>
       <div class="param-field">
-        <label>Excel sheet 序号</label>
-        <input class="fake-select-control" data-param="sheet_selector" type="text" value="1" placeholder="例如: 1 或 1,3,5">
-      </div>
-      <div class="param-field">
         <label>图形类型</label>
         <select class="fake-select-control" data-param="plot_type">
           <option value="scatter" selected>Scatter</option>
@@ -243,6 +239,17 @@ window.MODULE_HTML = {
     </div>
     <table class="simple-table">
       <thead><tr><th>簇</th><th>样本数</th><th>中心 1</th><th>中心 2</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-clipboard-list"></i> 各聚类指标</span>
+      <span class="badge">评价指标</span>
+    </div>
+    <table class="simple-table">
+      <thead><tr><th>sheet</th><th>轮廓系数</th><th>CH 指数</th><th>DB 指数</th><th>簇内平方和</th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
@@ -352,7 +359,7 @@ window.MODULE_HTML = {
       <span><i class="fas fa-table"></i> 样本得分</span>
       <span class="badge">各样本的主成分得分</span>
     </div>
-    <table class="scores-table simple-table">
+    <table class="simple-table">
       <thead><tr><th>样本</th><th>PC1</th><th>PC2</th><th>PC3</th></tr></thead>
       <tbody></tbody>
     </table>
@@ -557,7 +564,7 @@ window.MODULE_HTML = {
         <span><i class="fas fa-calculator"></i> 方差分析表</span>
         <span class="badge">ANOVA</span>
       </div>
-      <table class="anova-table simple-table">
+      <table class=" simple-table">
         <thead><tr><th>来源</th><th>SS</th><th>df</th><th>MS</th><th>F值</th><th>p值</th></tr></thead>
         <tbody></tbody>
       </table>
@@ -731,11 +738,9 @@ window.MODULE_HTML = {
         <i class="fas fa-file-code"></i> DataClean.py
         <span class="badge">DataClean</span>
       </div>
-      <pre class="python-code"><code><span style="color: #FF4689">import</span><span style="color: #F8F8F2"> io</span>
-<span style="color: #FF4689">import</span><span style="color: #F8F8F2"> json</span>
-<span style="color: #FF4689">import</span><span style="color: #F8F8F2"> os</span>
+      <pre class="python-code"><code><span style="color: #FF4689">import</span><span style="color: #F8F8F2"> os</span>
 <span style="color: #FF4689">import</span><span style="color: #F8F8F2"> re</span>
-<span style="color: #FF4689">from</span><span style="color: #F8F8F2"> typing </span><span style="color: #FF4689">import</span> <span style="color: #F8F8F2">Dict,</span> <span style="color: #F8F8F2">List,</span> <span style="color: #F8F8F2">Optional,</span> <span style="color: #F8F8F2">Tuple,</span> <span style="color: #F8F8F2">Union</span>
+<span style="color: #FF4689">from</span><span style="color: #F8F8F2"> typing </span><span style="color: #FF4689">import</span> <span style="color: #F8F8F2">Union</span>
 
 <span style="color: #FF4689">import</span><span style="color: #F8F8F2"> numpy </span><span style="color: #66D9EF">as</span><span style="color: #F8F8F2"> np</span>
 <span style="color: #FF4689">import</span><span style="color: #F8F8F2"> pandas </span><span style="color: #66D9EF">as</span><span style="color: #F8F8F2"> pd</span>
@@ -744,39 +749,81 @@ window.MODULE_HTML = {
 
 
 <span style="color: #959077"># 数据清洗</span>
-
-<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">clean_to_numeric</span><span style="color: #F8F8F2">(x)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Union[float,</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">nan]:</span>
-<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;将单个值转为数字：处理货币符号、百分号、逗号、全角数字等&quot;&quot;&quot;</span>
-    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">isna(x):</span>
-        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">nan</span>
-    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">isinstance(x,</span> <span style="color: #F8F8F2">(int,</span> <span style="color: #F8F8F2">float)):</span>
-        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">x</span>
-    <span style="color: #F8F8F2">s</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">str(x)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span>
-    <span style="color: #F8F8F2">s</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">re</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sub(</span><span style="color: #E6DB74">r&#39;[$€¥%]&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s)</span>           <span style="color: #959077"># 移除货币符号和百分号</span>
-    <span style="color: #F8F8F2">s</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">s</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">replace(</span><span style="color: #E6DB74">&#39;,&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;&#39;</span><span style="color: #F8F8F2">)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">replace(</span><span style="color: #E6DB74">&#39; &#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;&#39;</span><span style="color: #F8F8F2">)</span> <span style="color: #959077"># 移除千位分隔符和空格</span>
-    <span style="color: #F8F8F2">s</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">s</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">translate(str</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">maketrans(</span><span style="color: #E6DB74">&#39;０１２３４５６７８９&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;0123456789&#39;</span><span style="color: #F8F8F2">))</span>  <span style="color: #959077"># 全角转半角</span>
-    <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_numeric(s)</span>
-    <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">nan</span>
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_clean_series_numeric</span><span style="color: #F8F8F2">(series:</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">Series)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">Series:</span>
+<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;</span>
+<span style="color: #E6DB74">    向量化清洗单个 Series 中的数值格式：</span>
+<span style="color: #E6DB74">    - 货币符号（$€¥£₹等）</span>
+<span style="color: #E6DB74">    - 百分号（转除以100）</span>
+<span style="color: #E6DB74">    - 千位分隔符（逗号、空格）</span>
+<span style="color: #E6DB74">    - 全角数字、全角负号/小数点</span>
+<span style="color: #E6DB74">    - 括号负数 -&gt; 负号</span>
+<span style="color: #E6DB74">    &quot;&quot;&quot;</span>
+    <span style="color: #959077"># 先尝试直接转为数值</span>
+    <span style="color: #F8F8F2">numeric</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_numeric(series,</span> <span style="color: #F8F8F2">errors</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;coerce&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">downcast</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;float&#39;</span><span style="color: #F8F8F2">)</span>
+    
+    <span style="color: #959077"># 未被转换成功的索引</span>
+    <span style="color: #F8F8F2">failed_mask</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">numeric</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">isna()</span> <span style="color: #FF4689">&amp;</span> <span style="color: #F8F8F2">series</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">notna()</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">failed_mask</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">any():</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">numeric</span>
+    
+    <span style="color: #959077"># 对失败的条目进行字符串清理</span>
+    <span style="color: #F8F8F2">failed_vals</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">series[failed_mask]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">astype(str)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">str</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span>
+    
+    <span style="color: #959077"># 1. 全角负号和小数点映射</span>
+    <span style="color: #F8F8F2">fullwidth_map</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">str</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">maketrans(</span><span style="color: #E6DB74">&#39;－．&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;-.&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">failed_vals</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">failed_vals</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">str</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">translate(fullwidth_map)</span>
+    
+    <span style="color: #959077"># 2. 全角数字转半角</span>
+    <span style="color: #F8F8F2">fullwidth_digits</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">str</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">maketrans(</span><span style="color: #E6DB74">&#39;０１２３４５６７８９&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;0123456789&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">failed_vals</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">failed_vals</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">str</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">translate(fullwidth_digits)</span>
+    
+    <span style="color: #959077"># 3. 移除货币符号</span>
+    <span style="color: #F8F8F2">currency_pattern</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">r&#39;[$€¥£₹]&#39;</span>
+    <span style="color: #F8F8F2">failed_vals</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">failed_vals</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">str</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">replace(currency_pattern,</span> <span style="color: #E6DB74">&#39;&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">regex</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">True</span><span style="color: #F8F8F2">)</span>
+    
+    <span style="color: #959077"># 4. 处理括号负数： (123.45) -&gt; -123.45</span>
+    <span style="color: #F8F8F2">failed_vals</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">failed_vals</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">str</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">replace(</span><span style="color: #E6DB74">r&#39;^\\((.*)\\)$&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">r&#39;-\\1&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">regex</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">True</span><span style="color: #F8F8F2">)</span>
+    
+    <span style="color: #959077"># 5. 移除百分号并除以100</span>
+    <span style="color: #F8F8F2">pct_mask</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">failed_vals</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">str</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">contains(</span><span style="color: #E6DB74">r&#39;%&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">na</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">False</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">failed_vals</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">failed_vals</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">str</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">replace(</span><span style="color: #E6DB74">r&#39;%&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">regex</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">True</span><span style="color: #F8F8F2">)</span>
+    
+    <span style="color: #959077"># 6. 移除千位分隔符（逗号）和空格（只移除数字内部的空格，保守处理）</span>
+    <span style="color: #F8F8F2">failed_vals</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">failed_vals</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">str</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">replace(</span><span style="color: #E6DB74">&#39;,&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">regex</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">False</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">failed_vals</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">failed_vals</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">str</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">replace(</span><span style="color: #E6DB74">&#39; &#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">regex</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">False</span><span style="color: #F8F8F2">)</span>
+    
+    <span style="color: #959077"># 第二次转数值</span>
+    <span style="color: #F8F8F2">cleaned_numeric</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_numeric(failed_vals,</span> <span style="color: #F8F8F2">errors</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;coerce&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">downcast</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;float&#39;</span><span style="color: #F8F8F2">)</span>
+    
+    <span style="color: #959077"># 百分比除以100</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">pct_mask</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">any():</span>
+        <span style="color: #959077"># pct_mask 索引对应原始 failed_mask 内的子集，需要对齐</span>
+        <span style="color: #959077"># 在 cleaned_numeric 上，根据原始的带%标记来调整</span>
+        <span style="color: #F8F8F2">pct_mask_full</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">failed_mask</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">copy()</span>
+        <span style="color: #F8F8F2">pct_mask_full[failed_mask]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pct_mask</span>
+        <span style="color: #F8F8F2">numeric</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">loc[pct_mask_full]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">cleaned_numeric</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">loc[pct_mask]</span> <span style="color: #FF4689">/</span> <span style="color: #AE81FF">100.0</span>
+    <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">numeric</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">loc[failed_mask]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">cleaned_numeric</span>
+    
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">numeric</span>
 
 
 <span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">clean_dataframe</span><span style="color: #F8F8F2">(</span>
     <span style="color: #F8F8F2">df:</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame,</span>
     <span style="color: #F8F8F2">name_col_index:</span> <span style="color: #F8F8F2">Union[int,</span> <span style="color: #F8F8F2">str]</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">,</span>
     <span style="color: #F8F8F2">missing_strategy:</span> <span style="color: #F8F8F2">str</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;mean&quot;</span><span style="color: #F8F8F2">,</span>
-    <span style="color: #F8F8F2">standardize</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">True</span>
-<span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame</span> <span style="color: #F8F8F2">:</span>
+    <span style="color: #F8F8F2">standardize:</span> <span style="color: #F8F8F2">bool</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">True</span>
+<span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame:</span>
 <span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;</span>
 <span style="color: #E6DB74">    清洗数据框中的数值列，保留一列标识列（如名称）。</span>
-
+<span style="color: #E6DB74"> </span>
 <span style="color: #E6DB74">    参数:</span>
 <span style="color: #E6DB74">        df: 原始 DataFrame</span>
 <span style="color: #E6DB74">        name_col_index: 标识列的索引（整数位置）或列名</span>
 <span style="color: #E6DB74">        missing_strategy: 缺失值处理策略，&#39;drop&#39; 或 sklearn SimpleImputer 支持的策略</span>
 <span style="color: #E6DB74">        standardize: 是否标准化</span>
 
-<span style="color: #E6DB74">    返回:   clean_df</span>
+<span style="color: #E6DB74">    返回: clean_df</span>
 <span style="color: #E6DB74">    &quot;&quot;&quot;</span>
     <span style="color: #959077"># 标识列处理</span>
     <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">isinstance(name_col_index,</span> <span style="color: #F8F8F2">str):</span>
@@ -788,8 +835,10 @@ window.MODULE_HTML = {
         <span style="color: #F8F8F2">name_data</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">df[[name_col]]</span>
         <span style="color: #F8F8F2">numeric_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[c</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i,</span> <span style="color: #F8F8F2">c</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">enumerate(df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns)</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">!=</span> <span style="color: #F8F8F2">name_col_index]</span>
 
-    <span style="color: #959077"># 转换数值列</span>
-    <span style="color: #F8F8F2">numeric_df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">df[numeric_cols]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">applymap(clean_to_numeric)</span>
+    <span style="color: #959077"># 向量化转换数值列</span>
+    <span style="color: #F8F8F2">numeric_df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame(index</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">index)</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">col</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">numeric_cols:</span>
+        <span style="color: #F8F8F2">numeric_df[col]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_clean_series_numeric(df[col])</span>
 
     <span style="color: #959077"># 缺失值处理</span>
     <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">missing_strategy</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&quot;drop&quot;</span><span style="color: #F8F8F2">:</span>
@@ -799,6 +848,13 @@ window.MODULE_HTML = {
         <span style="color: #F8F8F2">imputer</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">SimpleImputer(strategy</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">missing_strategy)</span>
         <span style="color: #F8F8F2">numeric_array</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">imputer</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">fit_transform(numeric_df)</span>
         <span style="color: #F8F8F2">numeric_df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame(numeric_array,</span> <span style="color: #F8F8F2">columns</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">numeric_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns,</span> <span style="color: #F8F8F2">index</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">numeric_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">index)</span>
+   
+    <span style="color: #959077"># 删除填充后残留的空缺值</span>
+    <span style="color: #F8F8F2">nan_rows_before</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">numeric_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">isna()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">any(axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum()</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">nan_rows_before</span> <span style="color: #FF4689">&gt;</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">numeric_df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">numeric_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">dropna()</span>
+        <span style="color: #F8F8F2">name_data</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">name_data</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">loc[numeric_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">index]</span>
+        <span style="color: #F8F8F2">print(</span><span style="color: #E6DB74">f&quot;警告：填充后仍有 {</span><span style="color: #F8F8F2">nan_rows_before</span><span style="color: #E6DB74">} 行包含 NaN，已删除。&quot;</span><span style="color: #F8F8F2">)</span>
 
     <span style="color: #959077"># 标准化</span>
     <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">standardize:</span>
@@ -812,155 +868,30 @@ window.MODULE_HTML = {
     <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">result</span>
 
 
-<span style="color: #959077"># ----------------------------------------------------------------------</span>
-<span style="color: #959077"># 文件上传 &amp; 多 sheet 加载（原 Clustering.py 中的逻辑）</span>
-<span style="color: #959077"># ----------------------------------------------------------------------</span>
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">auto_clean</span><span style="color: #F8F8F2">(input_path:</span> <span style="color: #F8F8F2">str,</span> <span style="color: #F8F8F2">output_path:</span> <span style="color: #F8F8F2">str</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">str:</span>
+<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;从 input_path 读 CSV，自动清洗后写入 output_path。</span>
 
-<span style="color: #F8F8F2">UPLOAD_NAME_PATH</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;/home/pyodide/upload_name.txt&quot;</span>
-<span style="color: #F8F8F2">UPLOAD_META_PATH</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;/home/pyodide/upload_meta.json&quot;</span>
-<span style="color: #F8F8F2">DATA_DIR</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;/home/pyodide&quot;</span>
+<span style="color: #E6DB74">    自动检测编码与分隔符，先做类型转换（clean_to_numeric），</span>
+<span style="color: #E6DB74">    再用均值填补缺失值（不做标准化）。</span>
 
-
-<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">get_upload_meta</span><span style="color: #F8F8F2">()</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Tuple[str,</span> <span style="color: #F8F8F2">str]:</span>
-<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;返回 (数据文件路径, 扩展名)&quot;&quot;&quot;</span>
-    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">exists(UPLOAD_META_PATH):</span>
-        <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-            <span style="color: #F8F8F2">meta</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">json</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">loads(open(UPLOAD_META_PATH,</span> <span style="color: #E6DB74">&quot;r&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read())</span>
-            <span style="color: #F8F8F2">sheets</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">meta</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;sheets&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">[])</span>
-            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">sheets:</span>
-                <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">sheets[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">][</span><span style="color: #E6DB74">&quot;path&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #E6DB74">&quot;csv&quot;</span>
-        <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span><span style="color: #F8F8F2">:</span>
-            <span style="color: #66D9EF">pass</span>
-
-    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">exists(UPLOAD_NAME_PATH):</span>
-        <span style="color: #66D9EF">with</span> <span style="color: #F8F8F2">open(UPLOAD_NAME_PATH,</span> <span style="color: #E6DB74">&quot;r&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">)</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">f:</span>
-            <span style="color: #F8F8F2">original_name</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">f</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span>
-        <span style="color: #F8F8F2">ext</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">(original_name</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">split(</span><span style="color: #E6DB74">&quot;.&quot;</span><span style="color: #F8F8F2">)[</span><span style="color: #FF4689">-</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]</span> <span style="color: #66D9EF">if</span> <span style="color: #E6DB74">&quot;.&quot;</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">original_name</span> <span style="color: #66D9EF">else</span> <span style="color: #E6DB74">&quot;csv&quot;</span><span style="color: #F8F8F2">)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">lower()</span>
-        <span style="color: #F8F8F2">path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">join(DATA_DIR,</span> <span style="color: #E6DB74">f&quot;data.{</span><span style="color: #F8F8F2">ext</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span>
-    <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #F8F8F2">path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">join(DATA_DIR,</span> <span style="color: #E6DB74">&quot;data.csv&quot;</span><span style="color: #F8F8F2">)</span>
-        <span style="color: #F8F8F2">ext</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;csv&quot;</span>
-
-    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">exists(path):</span>
-        <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;未检测到上传文件，请先上传 CSV/Excel 文件。&quot;</span><span style="color: #F8F8F2">)</span>
-    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">path,</span> <span style="color: #F8F8F2">ext</span>
-
-
-<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">load_dataframe_from_upload</span><span style="color: #F8F8F2">(sheet_name:</span> <span style="color: #F8F8F2">Optional[str]</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame:</span>
-<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;从上传路径加载 DataFrame（CSV，自动检测编码与分隔符）&quot;&quot;&quot;</span>
-    <span style="color: #F8F8F2">path,</span> <span style="color: #F8F8F2">_</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">get_upload_meta()</span>
+<span style="color: #E6DB74">    返回: output_path</span>
+<span style="color: #E6DB74">    &quot;&quot;&quot;</span>
+    <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">None</span>
     <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">enc</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;utf-8-sig&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;gbk&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;gb18030&quot;</span><span style="color: #F8F8F2">):</span>
         <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-            <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(path,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">enc,</span> <span style="color: #F8F8F2">sep</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">None</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">engine</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;python&quot;</span><span style="color: #F8F8F2">)</span>
+            <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(input_path,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">enc,</span> <span style="color: #F8F8F2">sep</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">None</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">engine</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;python&quot;</span><span style="color: #F8F8F2">)</span>
+            <span style="color: #66D9EF">break</span>
         <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span><span style="color: #F8F8F2">:</span>
             <span style="color: #66D9EF">continue</span>
-    <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;CSV 解析失败，请检查编码/分隔符，或改存为 UTF-8 CSV 后重试。&quot;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">is</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;无法读取文件: {</span><span style="color: #F8F8F2">input_path</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span>
 
-
-<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">load_numeric_data</span><span style="color: #F8F8F2">(sheet_name:</span> <span style="color: #F8F8F2">Optional[str]</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame:</span>
-<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;</span>
-<span style="color: #E6DB74">    从上传文件加载数值数据。</span>
-<span style="color: #E6DB74">    &quot;&quot;&quot;</span>
-    <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">load_dataframe_from_upload(sheet_name</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">sheet_name)</span>
-    <span style="color: #F8F8F2">num_df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">clean_dataframe(df)</span>
-    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">num_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">empty:</span>
-        <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;未检测到可用于聚类的数值列，请上传包含数值列的 CSV/Excel。&quot;</span><span style="color: #F8F8F2">)</span>
-    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">num_df</span>
-
-
-<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">load_multi_sheets</span><span style="color: #F8F8F2">(</span>
-    <span style="color: #F8F8F2">sheet_selector:</span> <span style="color: #F8F8F2">str</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;&quot;</span><span style="color: #F8F8F2">,</span>
-    <span style="color: #F8F8F2">name_col_index:</span> <span style="color: #F8F8F2">Union[int,</span> <span style="color: #F8F8F2">str]</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">,</span>
-    <span style="color: #F8F8F2">missing_strategy:</span> <span style="color: #F8F8F2">str</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;mean&quot;</span><span style="color: #F8F8F2">,</span>
-    <span style="color: #F8F8F2">standardize:</span> <span style="color: #F8F8F2">bool</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">True</span><span style="color: #F8F8F2">,</span>
-<span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">List[Tuple[str,</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame]]:</span>
-<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;</span>
-<span style="color: #E6DB74">    根据 sheet_selector 加载多个 sheet 的数据，并对每个 sheet 应用统一的清洗流程。</span>
-
-<span style="color: #E6DB74">    参数:</span>
-<span style="color: #E6DB74">        sheet_selector: 逗号分隔的 sheet 序号（从1开始），例如 &quot;1,3&quot;。为空时只加载第一个 sheet。</span>
-<span style="color: #E6DB74">        name_col_index: 标识列的索引（整数位置）或列名，将保留此列不参与数值转换。</span>
-<span style="color: #E6DB74">        missing_strategy: 缺失值处理策略，&#39;drop&#39; 或 sklearn SimpleImputer 支持的策略。</span>
-<span style="color: #E6DB74">        standardize: 是否对数值列进行标准化。</span>
-
-<span style="color: #E6DB74">    返回:</span>
-<span style="color: #E6DB74">        List[Tuple[str, pd.DataFrame]]，每个元素为 (sheet名称, 清洗后的DataFrame)。</span>
-
-<span style="color: #E6DB74">    异常:</span>
-<span style="color: #E6DB74">        ValueError: 当元数据缺失、sheet序号越界、文件读取失败或无可用于聚类的数值列时抛出。</span>
-<span style="color: #E6DB74">    &quot;&quot;&quot;</span>
-    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">exists(UPLOAD_META_PATH):</span>
-        <span style="color: #959077"># 没有元数据时回退到单 sheet 行为（兼容旧上传）</span>
-        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">load_numeric_data()</span>  <span style="color: #959077"># 使用默认清洗参数</span>
-        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">[(</span><span style="color: #E6DB74">&quot;sheet1&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">df)]</span>
-
-    <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #66D9EF">with</span> <span style="color: #F8F8F2">open(UPLOAD_META_PATH,</span> <span style="color: #E6DB74">&quot;r&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">)</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">f:</span>
-            <span style="color: #F8F8F2">meta</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">json</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">load(f)</span>
-    <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">e:</span>
-        <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;上传元信息读取失败: {</span><span style="color: #F8F8F2">e</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">from</span><span style="color: #F8F8F2"> e</span>
-
-    <span style="color: #F8F8F2">sheets</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">meta</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;sheets&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">[])</span>
-    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">sheets:</span>
-        <span style="color: #959077"># meta 存在但无 sheets 信息，仍回退到单 sheet</span>
-        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">load_numeric_data()</span>
-        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">[(</span><span style="color: #E6DB74">&quot;sheet1&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">df)]</span>
-
-    <span style="color: #959077"># 解析 sheet 选择器</span>
-    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">sheet_selector:</span>
-        <span style="color: #F8F8F2">chosen_indices</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span>
-    <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #F8F8F2">chosen_indices</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
-        <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">token</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">sheet_selector</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">split(</span><span style="color: #E6DB74">&quot;,&quot;</span><span style="color: #F8F8F2">):</span>
-            <span style="color: #F8F8F2">token</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">token</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span>
-            <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">token:</span>
-                <span style="color: #66D9EF">continue</span>
-            <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-                <span style="color: #F8F8F2">idx</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">int(token)</span> <span style="color: #FF4689">-</span> <span style="color: #AE81FF">1</span>  <span style="color: #959077"># 转换为 0‑based</span>
-            <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">:</span>
-                <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;无效的 sheet 序号: &#39;{</span><span style="color: #F8F8F2">token</span><span style="color: #E6DB74">}&#39;，应为整数&quot;</span><span style="color: #F8F8F2">)</span>
-            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">idx</span> <span style="color: #FF4689">&lt;</span> <span style="color: #AE81FF">0</span> <span style="color: #FF4689">or</span> <span style="color: #F8F8F2">idx</span> <span style="color: #FF4689">&gt;=</span> <span style="color: #F8F8F2">len(sheets):</span>
-                <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;sheet 序号越界: {</span><span style="color: #F8F8F2">idx</span><span style="color: #FF4689">+</span><span style="color: #AE81FF">1</span><span style="color: #E6DB74">}，有效范围 1~{</span><span style="color: #F8F8F2">len(sheets)</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span>
-            <span style="color: #F8F8F2">chosen_indices</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(idx)</span>
-        <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">chosen_indices:</span>
-            <span style="color: #F8F8F2">chosen_indices</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span>
-
-    <span style="color: #F8F8F2">results:</span> <span style="color: #F8F8F2">List[Tuple[str,</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame]]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
-    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">idx</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">chosen_indices:</span>
-        <span style="color: #F8F8F2">sheet_info</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">sheets[idx]</span>
-        <span style="color: #F8F8F2">sheet_name</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">sheet_info</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;name&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">f&quot;sheet{</span><span style="color: #F8F8F2">sheet_info</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;index&#39;</span><span style="color: #F8F8F2">, idx</span><span style="color: #FF4689">+</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span>
-        <span style="color: #F8F8F2">sheet_path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">sheet_info</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;path&quot;</span><span style="color: #F8F8F2">)</span>
-        <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">sheet_path:</span>
-            <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;sheet &#39;{</span><span style="color: #F8F8F2">sheet_name</span><span style="color: #E6DB74">}&#39; 缺少 path 信息&quot;</span><span style="color: #F8F8F2">)</span>
-
-        <span style="color: #959077"># 读取 CSV（尝试多种编码与自动分隔符）</span>
-        <span style="color: #F8F8F2">df_raw</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">None</span>
-        <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">enc</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;utf-8-sig&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;gbk&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;gb18030&quot;</span><span style="color: #F8F8F2">):</span>
-            <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-                <span style="color: #F8F8F2">df_raw</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(sheet_path,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">enc,</span> <span style="color: #F8F8F2">sep</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">None</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">engine</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;python&quot;</span><span style="color: #F8F8F2">)</span>
-                <span style="color: #66D9EF">break</span>
-            <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span><span style="color: #F8F8F2">:</span>
-                <span style="color: #66D9EF">continue</span>
-        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">df_raw</span> <span style="color: #FF4689">is</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">:</span>
-            <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;sheet &#39;{</span><span style="color: #F8F8F2">sheet_name</span><span style="color: #E6DB74">}&#39; CSV 解析失败，请检查编码/分隔符&quot;</span><span style="color: #F8F8F2">)</span>
-
-        <span style="color: #959077"># 应用与 load_numeric_data 完全一致的清洗流程</span>
-        <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-            <span style="color: #F8F8F2">cleaned_df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">clean_dataframe(</span>
-                <span style="color: #F8F8F2">df_raw,</span>
-                <span style="color: #F8F8F2">name_col_index</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">name_col_index,</span>
-                <span style="color: #F8F8F2">missing_strategy</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">missing_strategy,</span>
-                <span style="color: #F8F8F2">standardize</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">standardize,</span>
-            <span style="color: #F8F8F2">)</span>
-        <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">e:</span>
-            <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;sheet &#39;{</span><span style="color: #F8F8F2">sheet_name</span><span style="color: #E6DB74">}&#39; 数据清洗失败: {</span><span style="color: #F8F8F2">e</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">from</span><span style="color: #F8F8F2"> e</span>
-
-        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">cleaned_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">empty:</span>
-            <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;sheet &#39;{</span><span style="color: #F8F8F2">sheet_name</span><span style="color: #E6DB74">}&#39; 清洗后无有效数据，可能缺少数值列或全部为缺失值&quot;</span><span style="color: #F8F8F2">)</span>
-
-        <span style="color: #F8F8F2">results</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append((sheet_name,</span> <span style="color: #F8F8F2">cleaned_df))</span>
-
-    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">results</span>
+    <span style="color: #F8F8F2">cleaned</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">clean_dataframe(df,</span> <span style="color: #F8F8F2">standardize</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">False</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">output_path</span> <span style="color: #FF4689">is</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">base,</span> <span style="color: #F8F8F2">ext</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">splitext(input_path)</span>
+        <span style="color: #F8F8F2">output_path</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">base</span><span style="color: #E6DB74">}.cleaned{</span><span style="color: #F8F8F2">ext</span><span style="color: #E6DB74">}&quot;</span>
+    <span style="color: #F8F8F2">cleaned</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_csv(output_path,</span> <span style="color: #F8F8F2">index</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">False</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;utf-8-sig&quot;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">output_path</span>
 </code></pre>
     </div>
     <div class="python-file-card">
@@ -977,8 +908,6 @@ window.MODULE_HTML = {
         <span class="badge">Clustering</span>
       </div>
       <pre class="python-code"><code><span style="color: #FF4689">import</span><span style="color: #F8F8F2"> io</span>
-<span style="color: #FF4689">import</span><span style="color: #F8F8F2"> json</span>
-<span style="color: #FF4689">import</span><span style="color: #F8F8F2"> os</span>
 <span style="color: #FF4689">from</span><span style="color: #F8F8F2"> typing </span><span style="color: #FF4689">import</span> <span style="color: #F8F8F2">Dict,</span> <span style="color: #F8F8F2">List,</span> <span style="color: #F8F8F2">Tuple</span>
 
 <span style="color: #FF4689">import</span><span style="color: #F8F8F2"> numpy </span><span style="color: #66D9EF">as</span><span style="color: #F8F8F2"> np</span>
@@ -989,54 +918,15 @@ window.MODULE_HTML = {
 <span style="color: #FF4689">from</span><span style="color: #F8F8F2"> sklearn.metrics </span><span style="color: #FF4689">import</span> <span style="color: #F8F8F2">silhouette_score,</span> <span style="color: #F8F8F2">calinski_harabasz_score,</span> <span style="color: #F8F8F2">davies_bouldin_score</span>
 
 
-<span style="color: #F8F8F2">UPLOAD_NAME_PATH</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;/home/pyodide/upload_name.txt&quot;</span>
-<span style="color: #F8F8F2">UPLOAD_META_PATH</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;/home/pyodide/upload_meta.json&quot;</span>
-<span style="color: #F8F8F2">DATA_DIR</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;/home/pyodide&quot;</span>
 <span style="color: #F8F8F2">HIERARCHICAL_METHODS</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&quot;single&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;complete&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;average&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;centroid&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;median&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;ward&quot;</span><span style="color: #F8F8F2">]</span>
 
 
-<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_read_numeric_data</span><span style="color: #F8F8F2">(sheet_name</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Tuple[pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame,</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray]:</span>
-    <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_load_uploaded_dataframe(sheet_name</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">sheet_name)</span>
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_read_numeric_data</span><span style="color: #F8F8F2">(data_path:</span> <span style="color: #F8F8F2">str)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Tuple[pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame,</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray]:</span>
+    <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(data_path)</span>
     <span style="color: #F8F8F2">num_df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">select_dtypes(include</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">[np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">number])</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">dropna(axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">)</span>
     <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">num_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">empty:</span>
         <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;未检测到可用于聚类的数值列，请上传包含数值列的 CSV/Excel。&quot;</span><span style="color: #F8F8F2">)</span>
     <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">df,</span> <span style="color: #F8F8F2">num_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_numpy(dtype</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">float)</span>
-
-
-<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_get_upload_meta</span><span style="color: #F8F8F2">()</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Tuple[str,</span> <span style="color: #F8F8F2">str]:</span>
-    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">exists(UPLOAD_META_PATH):</span>
-        <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-            <span style="color: #F8F8F2">meta</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">json</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">loads(open(UPLOAD_META_PATH,</span> <span style="color: #E6DB74">&quot;r&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read())</span>
-            <span style="color: #F8F8F2">sheets</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">meta</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;sheets&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">[])</span>
-            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">sheets:</span>
-                <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">sheets[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">][</span><span style="color: #E6DB74">&quot;path&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #E6DB74">&quot;csv&quot;</span>
-        <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span><span style="color: #F8F8F2">:</span>
-            <span style="color: #66D9EF">pass</span>
-
-    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">exists(UPLOAD_NAME_PATH):</span>
-        <span style="color: #66D9EF">with</span> <span style="color: #F8F8F2">open(UPLOAD_NAME_PATH,</span> <span style="color: #E6DB74">&quot;r&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">)</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">f:</span>
-            <span style="color: #F8F8F2">original_name</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">f</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span>
-        <span style="color: #F8F8F2">ext</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">(original_name</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">split(</span><span style="color: #E6DB74">&quot;.&quot;</span><span style="color: #F8F8F2">)[</span><span style="color: #FF4689">-</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]</span> <span style="color: #66D9EF">if</span> <span style="color: #E6DB74">&quot;.&quot;</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">original_name</span> <span style="color: #66D9EF">else</span> <span style="color: #E6DB74">&quot;csv&quot;</span><span style="color: #F8F8F2">)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">lower()</span>
-        <span style="color: #F8F8F2">path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">join(DATA_DIR,</span> <span style="color: #E6DB74">f&quot;data.{</span><span style="color: #F8F8F2">ext</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span>
-    <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #F8F8F2">path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">join(DATA_DIR,</span> <span style="color: #E6DB74">&quot;data.csv&quot;</span><span style="color: #F8F8F2">)</span>
-        <span style="color: #F8F8F2">ext</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;csv&quot;</span>
-
-    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">exists(path):</span>
-        <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;未检测到上传文件，请先上传 CSV/Excel 文件。&quot;</span><span style="color: #F8F8F2">)</span>
-    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">path,</span> <span style="color: #F8F8F2">ext</span>
-
-
-<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_load_uploaded_dataframe</span><span style="color: #F8F8F2">(sheet_name</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame:</span>
-    <span style="color: #F8F8F2">path,</span> <span style="color: #F8F8F2">ext</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_get_upload_meta()</span>
-
-    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">enc</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;utf-8-sig&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;gbk&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;gb18030&quot;</span><span style="color: #F8F8F2">):</span>
-        <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-            <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(path,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">enc,</span> <span style="color: #F8F8F2">sep</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">None</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">engine</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;python&quot;</span><span style="color: #F8F8F2">)</span>
-        <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span><span style="color: #F8F8F2">:</span>
-            <span style="color: #66D9EF">continue</span>
-
-    <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;CSV 解析失败，请检查编码/分隔符，或改存为 UTF-8 CSV 后重试。&quot;</span><span style="color: #F8F8F2">)</span>
 
 
 <span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_standardize</span><span style="color: #F8F8F2">(x:</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray:</span>
@@ -1137,38 +1027,33 @@ window.MODULE_HTML = {
     <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">header,</span> <span style="color: #F8F8F2">rows</span>
 
 
-<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">analyze</span><span style="color: #F8F8F2">(</span>
-    <span style="color: #F8F8F2">options</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">None</span><span style="color: #F8F8F2">,</span>
-    <span style="color: #F8F8F2">algorithm:</span> <span style="color: #F8F8F2">str</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;kmeans&quot;</span><span style="color: #F8F8F2">,</span>
-    <span style="color: #F8F8F2">n_clusters:</span> <span style="color: #F8F8F2">int</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">3</span><span style="color: #F8F8F2">,</span>
-    <span style="color: #F8F8F2">init:</span> <span style="color: #F8F8F2">str</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;k-means++&quot;</span><span style="color: #F8F8F2">,</span>
-    <span style="color: #F8F8F2">max_iter:</span> <span style="color: #F8F8F2">int</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">300</span><span style="color: #F8F8F2">,</span>
-<span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Dict[str,</span> <span style="color: #F8F8F2">object]:</span>
-<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;前端默认入口：支持 KMeans 与系统聚类。</span>
-
-<span style="color: #E6DB74">    优先兼容 README 推荐的 analyze(options: dict) 形式。</span>
-<span style="color: #E6DB74">    &quot;&quot;&quot;</span>
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">analyze</span><span style="color: #F8F8F2">(options</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Dict[str,</span> <span style="color: #F8F8F2">object]:</span>
     <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">options</span> <span style="color: #FF4689">is</span> <span style="color: #FF4689">not</span> <span style="color: #66D9EF">None</span> <span style="color: #FF4689">and</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">isinstance(options,</span> <span style="color: #F8F8F2">dict):</span>
         <span style="color: #F8F8F2">to_py</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">getattr(options,</span> <span style="color: #E6DB74">&quot;to_py&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span>
         <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">callable(to_py):</span>
             <span style="color: #F8F8F2">options</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">to_py()</span>
 
+    <span style="color: #F8F8F2">algorithm</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;kmeans&quot;</span>
+    <span style="color: #F8F8F2">n_clusters</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">3</span>
+    <span style="color: #F8F8F2">init</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;k-means++&quot;</span>
+    <span style="color: #F8F8F2">max_iter</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">300</span>
+    <span style="color: #F8F8F2">loss</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;lloyd&quot;</span>
+    <span style="color: #F8F8F2">plot_type</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;scatter&quot;</span>
+    <span style="color: #F8F8F2">data_path</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">None</span>
+
     <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">isinstance(options,</span> <span style="color: #F8F8F2">dict):</span>
-        <span style="color: #F8F8F2">algorithm</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;algorithm&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">algorithm)</span>
-        <span style="color: #F8F8F2">n_clusters</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;n_clusters&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">n_clusters)</span>
+        <span style="color: #F8F8F2">algorithm</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">str(options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;algorithm&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">algorithm))</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">lower()</span>
+        <span style="color: #F8F8F2">n_clusters</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">int(options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;n_clusters&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">n_clusters))</span>
         <span style="color: #F8F8F2">init</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;init&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">init)</span>
-        <span style="color: #F8F8F2">max_iter</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;max_iter&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">max_iter)</span>
+        <span style="color: #F8F8F2">max_iter</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">int(options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;max_iter&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">max_iter))</span>
         <span style="color: #F8F8F2">loss</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">str(options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;loss&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;lloyd&quot;</span><span style="color: #F8F8F2">))</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">lower()</span>
         <span style="color: #F8F8F2">plot_type</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">str(options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;plot_type&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;scatter&quot;</span><span style="color: #F8F8F2">))</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">lower()</span>
-    <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #F8F8F2">loss</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;lloyd&quot;</span>
-        <span style="color: #F8F8F2">plot_type</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;scatter&quot;</span>
+        <span style="color: #F8F8F2">data_path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;data_path&quot;</span><span style="color: #F8F8F2">)</span>
 
-    <span style="color: #F8F8F2">sheet_selector</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;&quot;</span>
-    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">isinstance(options,</span> <span style="color: #F8F8F2">dict):</span>
-        <span style="color: #F8F8F2">sheet_selector</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">str(options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;sheet_selector&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;&quot;</span><span style="color: #F8F8F2">))</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">data_path:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;请先在左侧上传数据文件&quot;</span><span style="color: #F8F8F2">}</span>
 
-    <span style="color: #F8F8F2">dataset_list</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_prepare_datasets(sheet_selector)</span>
+    <span style="color: #F8F8F2">dataset_list</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_prepare_datasets(data_path)</span>
     <span style="color: #F8F8F2">n_clusters</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">max(</span><span style="color: #AE81FF">2</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">int(n_clusters))</span>
     <span style="color: #F8F8F2">max_iter</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">max(</span><span style="color: #AE81FF">10</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">int(max_iter))</span>
     <span style="color: #F8F8F2">algorithm</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">str(algorithm)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">lower()</span>
@@ -1236,75 +1121,33 @@ window.MODULE_HTML = {
                 <span style="color: #F8F8F2">center_strs</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">extend([</span><span style="color: #E6DB74">&quot;&quot;</span><span style="color: #F8F8F2">]</span> <span style="color: #FF4689">*</span> <span style="color: #F8F8F2">(kmeans_max_dim</span> <span style="color: #FF4689">-</span> <span style="color: #F8F8F2">len(center_strs)))</span>
             <span style="color: #F8F8F2">detail_rows</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append([sheet_label,</span> <span style="color: #F8F8F2">str(cluster_id),</span> <span style="color: #F8F8F2">str(sample_count)]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">center_strs)</span>
 
+    <span style="color: #F8F8F2">summary_header</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&quot;sheet&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;轮廓系数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;CH 指数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;DB 指数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;簇内平方和&quot;</span><span style="color: #F8F8F2">]</span>
     <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
         <span style="color: #E6DB74">&quot;svg&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">svgs[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">svgs</span> <span style="color: #66D9EF">else</span> <span style="color: #E6DB74">&quot;&quot;</span><span style="color: #F8F8F2">,</span>
         <span style="color: #E6DB74">&quot;svgs&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">svgs,</span>
         <span style="color: #E6DB74">&quot;metrics&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">metrics_first,</span>
-        <span style="color: #E6DB74">&quot;table_header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">detail_header</span> <span style="color: #FF4689">or</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&quot;sheet&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;信息&quot;</span><span style="color: #F8F8F2">],</span>
-        <span style="color: #E6DB74">&quot;table&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">detail_rows</span> <span style="color: #FF4689">or</span> <span style="color: #F8F8F2">[[</span><span style="color: #E6DB74">&quot;-&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;无结果&quot;</span><span style="color: #F8F8F2">]],</span>
-        <span style="color: #E6DB74">&quot;summary_header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&quot;sheet&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;轮廓系数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;CH 指数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;DB 指数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;簇内平方和&quot;</span><span style="color: #F8F8F2">],</span>
-        <span style="color: #E6DB74">&quot;summary_table&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">summary_rows,</span>
+        <span style="color: #E6DB74">&quot;tables&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span>
+            <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">detail_header</span> <span style="color: #FF4689">or</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&quot;sheet&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;信息&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">detail_rows</span> <span style="color: #FF4689">or</span> <span style="color: #F8F8F2">[[</span><span style="color: #E6DB74">&quot;-&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;无结果&quot;</span><span style="color: #F8F8F2">]]},</span>
+            <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">summary_header,</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">summary_rows},</span>
+        <span style="color: #F8F8F2">],</span>
     <span style="color: #F8F8F2">}</span>
 
 
-<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_prepare_datasets</span><span style="color: #F8F8F2">(sheet_selector:</span> <span style="color: #F8F8F2">str)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">List[Tuple[str,</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray]]:</span>
-    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">exists(UPLOAD_META_PATH):</span>
-        <span style="color: #F8F8F2">_,</span> <span style="color: #F8F8F2">x</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_numeric_data()</span>
-        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">[(</span><span style="color: #E6DB74">&quot;sheet1&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">x)]</span>
-    <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #F8F8F2">meta</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">json</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">loads(open(UPLOAD_META_PATH,</span> <span style="color: #E6DB74">&quot;r&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read())</span>
-    <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">e:</span>
-        <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;上传元信息读取失败: {</span><span style="color: #F8F8F2">e</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">from</span><span style="color: #F8F8F2"> e</span>
-    <span style="color: #F8F8F2">sheets</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">meta</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;sheets&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">[])</span>
-    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">sheets:</span>
-        <span style="color: #F8F8F2">_,</span> <span style="color: #F8F8F2">x</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_numeric_data()</span>
-        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">[(</span><span style="color: #E6DB74">&quot;sheet1&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">x)]</span>
-    <span style="color: #F8F8F2">names</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[s</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;name&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">f&quot;sheet{</span><span style="color: #F8F8F2">s</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;index&#39;</span><span style="color: #F8F8F2">, i</span><span style="color: #FF4689">+</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i,</span> <span style="color: #F8F8F2">s</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">enumerate(sheets)]</span>
-
-    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">sheet_selector:</span>
-        <span style="color: #F8F8F2">chosen_idx</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span>
-    <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #F8F8F2">chosen_idx</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
-        <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">token</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">sheet_selector</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">split(</span><span style="color: #E6DB74">&quot;,&quot;</span><span style="color: #F8F8F2">):</span>
-            <span style="color: #F8F8F2">t</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">token</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span>
-            <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">t:</span>
-                <span style="color: #66D9EF">continue</span>
-            <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">int(t)</span>
-            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">&lt;</span> <span style="color: #AE81FF">1</span> <span style="color: #FF4689">or</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">&gt;</span> <span style="color: #F8F8F2">len(sheets):</span>
-                <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;sheet 序号越界: {</span><span style="color: #F8F8F2">i</span><span style="color: #E6DB74">}，有效范围 1~{</span><span style="color: #F8F8F2">len(names)</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span>
-            <span style="color: #F8F8F2">chosen_idx</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(i</span> <span style="color: #FF4689">-</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span>
-        <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">chosen_idx:</span>
-            <span style="color: #F8F8F2">chosen_idx</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span>
-
-    <span style="color: #F8F8F2">datasets:</span> <span style="color: #F8F8F2">List[Tuple[str,</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray]]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
-    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">chosen_idx:</span>
-        <span style="color: #F8F8F2">s</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">sheets[i]</span>
-        <span style="color: #F8F8F2">sname</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">s</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;name&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">f&quot;sheet{</span><span style="color: #F8F8F2">s</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;index&#39;</span><span style="color: #F8F8F2">, i</span><span style="color: #FF4689">+</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">)</span>
-        <span style="color: #F8F8F2">path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">s</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;path&quot;</span><span style="color: #F8F8F2">)</span>
-        <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">path:</span>
-            <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;sheet &#39;{</span><span style="color: #F8F8F2">sname</span><span style="color: #E6DB74">}&#39; 缺少 path 信息。&quot;</span><span style="color: #F8F8F2">)</span>
-        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">None</span>
-        <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">enc</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;utf-8-sig&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;gbk&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;gb18030&quot;</span><span style="color: #F8F8F2">):</span>
-            <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-                <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(path,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">enc,</span> <span style="color: #F8F8F2">sep</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">None</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">engine</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;python&quot;</span><span style="color: #F8F8F2">)</span>
-                <span style="color: #66D9EF">break</span>
-            <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span><span style="color: #F8F8F2">:</span>
-                <span style="color: #66D9EF">continue</span>
-        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">is</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">:</span>
-            <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;sheet &#39;{</span><span style="color: #F8F8F2">sname</span><span style="color: #E6DB74">}&#39; CSV 解析失败。&quot;</span><span style="color: #F8F8F2">)</span>
-        <span style="color: #F8F8F2">num_df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">select_dtypes(include</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">[np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">number])</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">dropna(axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">)</span>
-        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">num_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">empty:</span>
-            <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;sheet &#39;{</span><span style="color: #F8F8F2">sname</span><span style="color: #E6DB74">}&#39; 未检测到可用于聚类的数值列。&quot;</span><span style="color: #F8F8F2">)</span>
-        <span style="color: #F8F8F2">datasets</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append((sname,</span> <span style="color: #F8F8F2">num_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_numpy(dtype</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">float)))</span>
-    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">datasets</span>
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_prepare_datasets</span><span style="color: #F8F8F2">(data_path:</span> <span style="color: #F8F8F2">str)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">List[Tuple[str,</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ndarray]]:</span>
+    <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(data_path)</span>
+    <span style="color: #F8F8F2">num_df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">select_dtypes(include</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">[np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">number])</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">dropna(axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">num_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">empty:</span>
+        <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;未检测到可用于聚类的数值列。&quot;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">[(</span><span style="color: #E6DB74">&quot;data&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">num_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_numpy(dtype</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">float))]</span>
 
 
-<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">hierarchical</span><span style="color: #F8F8F2">(method:</span> <span style="color: #F8F8F2">str</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;ward&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">n_clusters:</span> <span style="color: #F8F8F2">int</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">3</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Dict[str,</span> <span style="color: #F8F8F2">object]:</span>
-<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;系统聚类：single/complete/average/centroid/median/ward。&quot;&quot;&quot;</span>
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">hierarchical</span><span style="color: #F8F8F2">(method:</span> <span style="color: #F8F8F2">str</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;ward&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">n_clusters:</span> <span style="color: #F8F8F2">int</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">3</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">data_path:</span> <span style="color: #F8F8F2">str</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Dict[str,</span> <span style="color: #F8F8F2">object]:</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">data_path:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;请先上传数据文件&quot;</span><span style="color: #F8F8F2">}</span>
     <span style="color: #F8F8F2">method</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">method</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">lower()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span>
     <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">method</span> <span style="color: #FF4689">not</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">HIERARCHICAL_METHODS:</span>
         <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">f&quot;method 必须为 {</span><span style="color: #F8F8F2">HIERARCHICAL_METHODS</span><span style="color: #E6DB74">} 之一&quot;</span><span style="color: #F8F8F2">)</span>
-    <span style="color: #F8F8F2">_,</span> <span style="color: #F8F8F2">x</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_numeric_data()</span>
+    <span style="color: #F8F8F2">_,</span> <span style="color: #F8F8F2">x</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_numeric_data(data_path)</span>
     <span style="color: #F8F8F2">x_std</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_standardize(x)</span>
     <span style="color: #F8F8F2">x2</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_pca2(x_std)</span>
     <span style="color: #F8F8F2">z</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">linkage(x_std,</span> <span style="color: #F8F8F2">method</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">method)</span>
@@ -1316,14 +1159,14 @@ window.MODULE_HTML = {
     <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
         <span style="color: #E6DB74">&quot;svg&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">_svg_scatter(x2,</span> <span style="color: #F8F8F2">labels,</span> <span style="color: #E6DB74">f&quot;系统聚类({</span><span style="color: #F8F8F2">method</span><span style="color: #E6DB74">}) 结果 (K={</span><span style="color: #F8F8F2">n_clusters</span><span style="color: #E6DB74">})&quot;</span><span style="color: #F8F8F2">),</span>
         <span style="color: #E6DB74">&quot;metrics&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">metrics,</span>
-        <span style="color: #E6DB74">&quot;table_header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">header,</span>
-        <span style="color: #E6DB74">&quot;table&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">rows,</span>
+        <span style="color: #E6DB74">&quot;tables&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[{</span><span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">header,</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">rows}],</span>
     <span style="color: #F8F8F2">}</span>
 
 
-<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">analyze_all_methods</span><span style="color: #F8F8F2">(n_clusters:</span> <span style="color: #F8F8F2">int</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">3</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Dict[str,</span> <span style="color: #F8F8F2">object]:</span>
-<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;汇总 notebook 中全部聚类方法的指标。&quot;&quot;&quot;</span>
-    <span style="color: #F8F8F2">_,</span> <span style="color: #F8F8F2">x</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_numeric_data()</span>
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">analyze_all_methods</span><span style="color: #F8F8F2">(n_clusters:</span> <span style="color: #F8F8F2">int</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">3</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">data_path:</span> <span style="color: #F8F8F2">str</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">Dict[str,</span> <span style="color: #F8F8F2">object]:</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">data_path:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;请先上传数据文件&quot;</span><span style="color: #F8F8F2">}</span>
+    <span style="color: #F8F8F2">_,</span> <span style="color: #F8F8F2">x</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_numeric_data(data_path)</span>
     <span style="color: #F8F8F2">x_std</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_standardize(x)</span>
 
     <span style="color: #F8F8F2">results:</span> <span style="color: #F8F8F2">List[List[str]]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
@@ -1338,8 +1181,7 @@ window.MODULE_HTML = {
     <span style="color: #F8F8F2">results</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append([</span><span style="color: #E6DB74">&quot;kmeans&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">m[</span><span style="color: #E6DB74">&quot;silhouette&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">m[</span><span style="color: #E6DB74">&quot;ch&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">m[</span><span style="color: #E6DB74">&quot;db&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">km</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">inertia_</span><span style="color: #E6DB74">:.4f}&quot;</span><span style="color: #F8F8F2">])</span>
 
     <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
-        <span style="color: #E6DB74">&quot;table_header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&quot;方法&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;轮廓系数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;CH 指数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;DB 指数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;簇内平方和&quot;</span><span style="color: #F8F8F2">],</span>
-        <span style="color: #E6DB74">&quot;table&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">results,</span>
+        <span style="color: #E6DB74">&quot;tables&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[{</span><span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&quot;方法&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;轮廓系数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;CH 指数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;DB 指数&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;簇内平方和&quot;</span><span style="color: #F8F8F2">],</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">results}],</span>
     <span style="color: #F8F8F2">}</span>
 </code></pre>
     </div>
@@ -1369,20 +1211,11 @@ window.MODULE_HTML = {
 <span style="color: #FF4689">from</span><span style="color: #F8F8F2"> scipy </span><span style="color: #FF4689">import</span> <span style="color: #F8F8F2">stats</span>
 <span style="color: #FF4689">import</span><span style="color: #F8F8F2"> matplotlib.pyplot </span><span style="color: #66D9EF">as</span><span style="color: #F8F8F2"> plt</span>
 <span style="color: #FF4689">from</span><span style="color: #F8F8F2"> io </span><span style="color: #FF4689">import</span> <span style="color: #F8F8F2">BytesIO</span>
-<span style="color: #FF4689">import</span><span style="color: #F8F8F2"> json</span>
-<span style="color: #959077"># from __DataClean import clean_data</span>
 
 
-<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_read_data</span><span style="color: #F8F8F2">():</span>
-    <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #66D9EF">with</span> <span style="color: #F8F8F2">open(</span><span style="color: #E6DB74">&#39;/home/pyodide/upload_meta.json&#39;</span><span style="color: #F8F8F2">)</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">f:</span>
-            <span style="color: #F8F8F2">meta</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">json</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">load(f)</span>
-    <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #66D9EF">raise</span> <span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;请先在左侧上传数据文件&quot;</span><span style="color: #F8F8F2">)</span>
-    <span style="color: #F8F8F2">path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">meta[</span><span style="color: #E6DB74">&#39;sheets&#39;</span><span style="color: #F8F8F2">][</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">][</span><span style="color: #E6DB74">&#39;path&#39;</span><span style="color: #F8F8F2">]</span>
-    <span style="color: #F8F8F2">print(</span><span style="color: #E6DB74">f&#39;[Evaluation] 读取: {</span><span style="color: #F8F8F2">path</span><span style="color: #E6DB74">}&#39;</span><span style="color: #F8F8F2">)</span>
-    <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(path)</span>
-    <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">clean_data(df)</span>
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_read_data</span><span style="color: #F8F8F2">(data_path):</span>
+    <span style="color: #F8F8F2">print(</span><span style="color: #E6DB74">f&#39;[Evaluation] 读取: {</span><span style="color: #F8F8F2">data_path</span><span style="color: #E6DB74">}&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(data_path)</span>
     <span style="color: #F8F8F2">print(</span><span style="color: #E6DB74">f&#39;[Evaluation] 数据形状: {</span><span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">shape</span><span style="color: #E6DB74">}&#39;</span><span style="color: #F8F8F2">)</span>
     <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">df</span>
 
@@ -1395,9 +1228,12 @@ window.MODULE_HTML = {
 
 <span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">descriptive</span><span style="color: #F8F8F2">(options):</span>
     <span style="color: #F8F8F2">options</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_ensure_dict(options)</span>
+    <span style="color: #F8F8F2">data_path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;data_path&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">data_path:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;请先在左侧上传数据文件&quot;</span><span style="color: #F8F8F2">}</span>
     <span style="color: #F8F8F2">print(</span><span style="color: #E6DB74">f&#39;[描述性统计] 参数: column={</span><span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;column&quot;</span><span style="color: #F8F8F2">, </span><span style="color: #E6DB74">&quot;全部&quot;</span><span style="color: #F8F8F2">)</span><span style="color: #E6DB74">}&#39;</span><span style="color: #F8F8F2">)</span>
     <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_data()</span>
+        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_data(data_path)</span>
         <span style="color: #F8F8F2">column</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;column&#39;</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">or</span> <span style="color: #66D9EF">None</span>
 
         <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">column</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">column</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns:</span>
@@ -1406,19 +1242,19 @@ window.MODULE_HTML = {
                 <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&quot;列 &#39;{</span><span style="color: #F8F8F2">column</span><span style="color: #E6DB74">}&#39; 没有有效数据&quot;</span><span style="color: #F8F8F2">}</span>
             <span style="color: #F8F8F2">s</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_calc_stats(data)</span>
             <span style="color: #F8F8F2">print(</span><span style="color: #E6DB74">f&#39;[描述性统计] {</span><span style="color: #F8F8F2">column</span><span style="color: #E6DB74">}: 均值={</span><span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&quot;mean&quot;</span><span style="color: #F8F8F2">]</span><span style="color: #E6DB74">}, 标准差={</span><span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&quot;std&quot;</span><span style="color: #F8F8F2">]</span><span style="color: #E6DB74">}, 样本量={</span><span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&quot;n&quot;</span><span style="color: #F8F8F2">]</span><span style="color: #E6DB74">}&#39;</span><span style="color: #F8F8F2">)</span>
+            <span style="color: #F8F8F2">desc_table</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span>
+                <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;样本量&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;n&#39;</span><span style="color: #F8F8F2">]],</span>
+                <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;均值&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;mean&#39;</span><span style="color: #F8F8F2">]],</span>
+                <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;中位数&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;median&#39;</span><span style="color: #F8F8F2">]],</span>
+                <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;标准差&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;std&#39;</span><span style="color: #F8F8F2">]],</span>
+                <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;方差&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;var&#39;</span><span style="color: #F8F8F2">]],</span>
+                <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;最小值&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;min&#39;</span><span style="color: #F8F8F2">]],</span>
+                <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;最大值&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;max&#39;</span><span style="color: #F8F8F2">]],</span>
+                <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;偏度&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;skew&#39;</span><span style="color: #F8F8F2">]],</span>
+                <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;峰度&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;kurtosis&#39;</span><span style="color: #F8F8F2">]],</span>
+            <span style="color: #F8F8F2">]</span>
             <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
-                <span style="color: #E6DB74">&quot;table&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span>
-                    <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;样本量&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;n&#39;</span><span style="color: #F8F8F2">]],</span>
-                    <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;均值&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;mean&#39;</span><span style="color: #F8F8F2">]],</span>
-                    <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;中位数&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;median&#39;</span><span style="color: #F8F8F2">]],</span>
-                    <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;标准差&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;std&#39;</span><span style="color: #F8F8F2">]],</span>
-                    <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;方差&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;var&#39;</span><span style="color: #F8F8F2">]],</span>
-                    <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;最小值&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;min&#39;</span><span style="color: #F8F8F2">]],</span>
-                    <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;最大值&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;max&#39;</span><span style="color: #F8F8F2">]],</span>
-                    <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;偏度&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;skew&#39;</span><span style="color: #F8F8F2">]],</span>
-                    <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;峰度&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;kurtosis&#39;</span><span style="color: #F8F8F2">]],</span>
-                <span style="color: #F8F8F2">],</span>
-                <span style="color: #E6DB74">&quot;table_header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;统计指标&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">column],</span>
+                <span style="color: #E6DB74">&quot;tables&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[{</span><span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;统计指标&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">column],</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">desc_table}],</span>
                 <span style="color: #E6DB74">&quot;metrics&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;样本量&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;n&#39;</span><span style="color: #F8F8F2">],</span> <span style="color: #E6DB74">&quot;均值&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;mean&#39;</span><span style="color: #F8F8F2">],</span> <span style="color: #E6DB74">&quot;中位数&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;median&#39;</span><span style="color: #F8F8F2">],</span> <span style="color: #E6DB74">&quot;标准差&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">s[</span><span style="color: #E6DB74">&#39;std&#39;</span><span style="color: #F8F8F2">]},</span>
             <span style="color: #F8F8F2">}</span>
 
@@ -1446,8 +1282,7 @@ window.MODULE_HTML = {
 
         <span style="color: #F8F8F2">print(</span><span style="color: #E6DB74">f&#39;[描述性统计] 完成: {</span><span style="color: #F8F8F2">len(results)</span><span style="color: #E6DB74">} 个数值变量&#39;</span><span style="color: #F8F8F2">)</span>
         <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
-            <span style="color: #E6DB74">&quot;table&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">table,</span>
-            <span style="color: #E6DB74">&quot;table_header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">table_header,</span>
+            <span style="color: #E6DB74">&quot;tables&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[{</span><span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">table_header,</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">table}],</span>
             <span style="color: #E6DB74">&quot;metrics&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;样本量&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">len(df),</span> <span style="color: #E6DB74">&quot;均值&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">len(numeric_cols),</span> <span style="color: #E6DB74">&quot;中位数&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;标准差&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;&quot;</span><span style="color: #F8F8F2">},</span>
         <span style="color: #F8F8F2">}</span>
     <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">e:</span>
@@ -1470,9 +1305,12 @@ window.MODULE_HTML = {
 
 <span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">normality</span><span style="color: #F8F8F2">(options):</span>
     <span style="color: #F8F8F2">options</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_ensure_dict(options)</span>
+    <span style="color: #F8F8F2">data_path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;data_path&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">data_path:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;请先在左侧上传数据文件&quot;</span><span style="color: #F8F8F2">}</span>
     <span style="color: #F8F8F2">print(</span><span style="color: #E6DB74">f&#39;[正态性检验] 参数: column={</span><span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;column&quot;</span><span style="color: #F8F8F2">, </span><span style="color: #E6DB74">&quot;全部&quot;</span><span style="color: #F8F8F2">)</span><span style="color: #E6DB74">}, alpha={</span><span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;alpha&quot;</span><span style="color: #F8F8F2">, </span><span style="color: #AE81FF">0.05</span><span style="color: #F8F8F2">)</span><span style="color: #E6DB74">}&#39;</span><span style="color: #F8F8F2">)</span>
     <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_data()</span>
+        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_data(data_path)</span>
         <span style="color: #F8F8F2">column</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;column&#39;</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">or</span> <span style="color: #66D9EF">None</span>
         <span style="color: #F8F8F2">alpha</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">float(options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;alpha&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #AE81FF">0.05</span><span style="color: #F8F8F2">))</span>
 
@@ -1490,11 +1328,10 @@ window.MODULE_HTML = {
                         <span style="color: #E6DB74">&quot;statistic&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">round(stat,</span> <span style="color: #AE81FF">4</span><span style="color: #F8F8F2">),</span> <span style="color: #E6DB74">&quot;p_value&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">round(p,</span> <span style="color: #AE81FF">4</span><span style="color: #F8F8F2">),</span>
                         <span style="color: #E6DB74">&quot;is_normal&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;是&quot;</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">p</span> <span style="color: #FF4689">&gt;=</span> <span style="color: #F8F8F2">alpha</span> <span style="color: #66D9EF">else</span> <span style="color: #E6DB74">&quot;否&quot;</span><span style="color: #F8F8F2">,</span>
                     <span style="color: #F8F8F2">})</span>
-            <span style="color: #F8F8F2">table</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[[r[</span><span style="color: #E6DB74">&#39;name&#39;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">r[</span><span style="color: #E6DB74">&#39;n&#39;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">r[</span><span style="color: #E6DB74">&#39;statistic&#39;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">r[</span><span style="color: #E6DB74">&#39;p_value&#39;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">r[</span><span style="color: #E6DB74">&#39;is_normal&#39;</span><span style="color: #F8F8F2">]]</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">r</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">results]</span>
+            <span style="color: #F8F8F2">norm_table</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[[r[</span><span style="color: #E6DB74">&#39;name&#39;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">r[</span><span style="color: #E6DB74">&#39;n&#39;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">r[</span><span style="color: #E6DB74">&#39;statistic&#39;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">r[</span><span style="color: #E6DB74">&#39;p_value&#39;</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">r[</span><span style="color: #E6DB74">&#39;is_normal&#39;</span><span style="color: #F8F8F2">]]</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">r</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">results]</span>
             <span style="color: #F8F8F2">print(</span><span style="color: #E6DB74">f&#39;[正态性检验] 完成: {</span><span style="color: #F8F8F2">len(results)</span><span style="color: #E6DB74">} 个变量&#39;</span><span style="color: #F8F8F2">)</span>
             <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
-                <span style="color: #E6DB74">&quot;table&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">table,</span>
-                <span style="color: #E6DB74">&quot;table_header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;变量名&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;样本量&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;W统计量&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;p值&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;正态分布&#39;</span><span style="color: #F8F8F2">],</span>
+                <span style="color: #E6DB74">&quot;tables&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[{</span><span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;变量名&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;样本量&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;W统计量&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;p值&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;正态分布&#39;</span><span style="color: #F8F8F2">],</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">norm_table}],</span>
                 <span style="color: #E6DB74">&quot;metrics&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;W统计量&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">len(results),</span> <span style="color: #E6DB74">&quot;p值&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">alpha,</span> <span style="color: #E6DB74">&quot;正态性&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">len(results)</span><span style="color: #E6DB74">}个变量&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;显著性水平&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">alpha},</span>
             <span style="color: #F8F8F2">}</span>
 
@@ -1509,12 +1346,12 @@ window.MODULE_HTML = {
         <span style="color: #F8F8F2">is_normal</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">p</span> <span style="color: #FF4689">&gt;=</span> <span style="color: #F8F8F2">alpha</span>
         <span style="color: #F8F8F2">svg</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_generate_qq_plot(data,</span> <span style="color: #F8F8F2">column)</span>
         <span style="color: #F8F8F2">print(</span><span style="color: #E6DB74">f&#39;[正态性检验] {</span><span style="color: #F8F8F2">column</span><span style="color: #E6DB74">}: W={</span><span style="color: #F8F8F2">stat</span><span style="color: #E6DB74">:.4f}, p={</span><span style="color: #F8F8F2">p</span><span style="color: #E6DB74">:.4f}, {&quot;服从&quot;</span><span style="color: #F8F8F2"> </span><span style="color: #66D9EF">if</span><span style="color: #F8F8F2"> is_normal </span><span style="color: #66D9EF">else</span><span style="color: #F8F8F2"> </span><span style="color: #E6DB74">&quot;不服从&quot;}正态分布&#39;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">norm_table</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span>
+            <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;Shapiro-Wilk检验&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">round(stat,</span> <span style="color: #AE81FF">4</span><span style="color: #F8F8F2">),</span> <span style="color: #F8F8F2">round(p,</span> <span style="color: #AE81FF">4</span><span style="color: #F8F8F2">),</span>
+             <span style="color: #E6DB74">f&quot;{&#39;服从正态分布&#39;</span><span style="color: #F8F8F2"> </span><span style="color: #66D9EF">if</span><span style="color: #F8F8F2"> is_normal </span><span style="color: #66D9EF">else</span><span style="color: #F8F8F2"> </span><span style="color: #E6DB74">&#39;不服从正态分布&#39;} (α={</span><span style="color: #F8F8F2">alpha</span><span style="color: #E6DB74">})&quot;</span><span style="color: #F8F8F2">],</span>
+        <span style="color: #F8F8F2">]</span>
         <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
-            <span style="color: #E6DB74">&quot;table&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span>
-                <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;Shapiro-Wilk检验&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">round(stat,</span> <span style="color: #AE81FF">4</span><span style="color: #F8F8F2">),</span> <span style="color: #F8F8F2">round(p,</span> <span style="color: #AE81FF">4</span><span style="color: #F8F8F2">),</span>
-                 <span style="color: #E6DB74">f&quot;{&#39;服从正态分布&#39;</span><span style="color: #F8F8F2"> </span><span style="color: #66D9EF">if</span><span style="color: #F8F8F2"> is_normal </span><span style="color: #66D9EF">else</span><span style="color: #F8F8F2"> </span><span style="color: #E6DB74">&#39;不服从正态分布&#39;} (α={</span><span style="color: #F8F8F2">alpha</span><span style="color: #E6DB74">})&quot;</span><span style="color: #F8F8F2">],</span>
-            <span style="color: #F8F8F2">],</span>
-            <span style="color: #E6DB74">&quot;table_header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;检验项目&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;统计量&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;p值&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;结论&#39;</span><span style="color: #F8F8F2">],</span>
+            <span style="color: #E6DB74">&quot;tables&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[{</span><span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;检验项目&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;统计量&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;p值&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;结论&#39;</span><span style="color: #F8F8F2">],</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">norm_table}],</span>
             <span style="color: #E6DB74">&quot;svg&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">svg,</span>
             <span style="color: #E6DB74">&quot;metrics&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;W统计量&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">round(stat,</span> <span style="color: #AE81FF">4</span><span style="color: #F8F8F2">),</span> <span style="color: #E6DB74">&quot;p值&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">round(p,</span> <span style="color: #AE81FF">4</span><span style="color: #F8F8F2">),</span> <span style="color: #E6DB74">&quot;正态性&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;服从&quot;</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">is_normal</span> <span style="color: #66D9EF">else</span> <span style="color: #E6DB74">&quot;不服从&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;显著性水平&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">alpha},</span>
         <span style="color: #F8F8F2">}</span>
@@ -1541,9 +1378,12 @@ window.MODULE_HTML = {
 
 <span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">anova</span><span style="color: #F8F8F2">(options):</span>
     <span style="color: #F8F8F2">options</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_ensure_dict(options)</span>
+    <span style="color: #F8F8F2">data_path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;data_path&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">data_path:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;请先在左侧上传数据文件&quot;</span><span style="color: #F8F8F2">}</span>
     <span style="color: #F8F8F2">print(</span><span style="color: #E6DB74">f&#39;[方差分析] 参数: dependent_var={</span><span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;dependent_var&quot;</span><span style="color: #F8F8F2">)</span><span style="color: #E6DB74">}, group_var={</span><span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&quot;group_var&quot;</span><span style="color: #F8F8F2">)</span><span style="color: #E6DB74">}&#39;</span><span style="color: #F8F8F2">)</span>
     <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_data()</span>
+        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_data(data_path)</span>
         <span style="color: #F8F8F2">dependent</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;dependent_var&#39;</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">or</span> <span style="color: #66D9EF">None</span>
         <span style="color: #F8F8F2">group</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;group_var&#39;</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">or</span> <span style="color: #66D9EF">None</span>
 
@@ -1592,10 +1432,10 @@ window.MODULE_HTML = {
         <span style="color: #F8F8F2">is_sig</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">p_value</span> <span style="color: #FF4689">&lt;</span> <span style="color: #AE81FF">0.05</span>
         <span style="color: #F8F8F2">print(</span><span style="color: #E6DB74">f&#39;[方差分析] {</span><span style="color: #F8F8F2">dependent</span><span style="color: #E6DB74">} ~ {</span><span style="color: #F8F8F2">group</span><span style="color: #E6DB74">}: F({</span><span style="color: #F8F8F2">df_between</span><span style="color: #E6DB74">},{</span><span style="color: #F8F8F2">df_within</span><span style="color: #E6DB74">})={</span><span style="color: #F8F8F2">f_stat</span><span style="color: #E6DB74">:.4f}, p={</span><span style="color: #F8F8F2">p_value</span><span style="color: #E6DB74">:.4f}, {&quot;显著&quot;</span><span style="color: #F8F8F2"> </span><span style="color: #66D9EF">if</span><span style="color: #F8F8F2"> is_sig </span><span style="color: #66D9EF">else</span><span style="color: #F8F8F2"> </span><span style="color: #E6DB74">&quot;不显著&quot;}&#39;</span><span style="color: #F8F8F2">)</span>
         <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
-            <span style="color: #E6DB74">&quot;table&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">table,</span>
-            <span style="color: #E6DB74">&quot;table_header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;组别&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;样本量&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;均值&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;标准差&#39;</span><span style="color: #F8F8F2">],</span>
-            <span style="color: #E6DB74">&quot;anova_table&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">anova_table,</span>
-            <span style="color: #E6DB74">&quot;anova_table_header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">anova_header,</span>
+            <span style="color: #E6DB74">&quot;tables&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span>
+                <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;组别&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;样本量&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;均值&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;标准差&#39;</span><span style="color: #F8F8F2">],</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">table},</span>
+                <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">anova_header,</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">anova_table},</span>
+            <span style="color: #F8F8F2">],</span>
             <span style="color: #E6DB74">&quot;svg&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">svg,</span>
             <span style="color: #E6DB74">&quot;metrics&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;F值&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">round(f_stat,</span> <span style="color: #AE81FF">4</span><span style="color: #F8F8F2">),</span> <span style="color: #E6DB74">&quot;p值&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">round(p_value,</span> <span style="color: #AE81FF">4</span><span style="color: #F8F8F2">),</span> <span style="color: #E6DB74">&quot;显著性&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;显著&quot;</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">is_sig</span> <span style="color: #66D9EF">else</span> <span style="color: #E6DB74">&quot;不显著&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;组数&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">len(groups)},</span>
         <span style="color: #F8F8F2">}</span>
@@ -1643,14 +1483,6 @@ window.MODULE_HTML = {
     </div>
     <div class="python-file-card">
       <div class="python-file-header">
-        <i class="fas fa-file-code"></i> File.py
-        <span class="badge">File</span>
-      </div>
-      <pre class="python-code"><code><span style="color: #959077"># 此文件处理文件上传逻辑</span>
-</code></pre>
-    </div>
-    <div class="python-file-card">
-      <div class="python-file-header">
         <i class="fas fa-file-code"></i> Pca.py
         <span class="badge">Pca</span>
       </div>
@@ -1660,37 +1492,22 @@ window.MODULE_HTML = {
 <span style="color: #FF4689">import</span><span style="color: #F8F8F2"> matplotlib.font_manager </span><span style="color: #66D9EF">as</span><span style="color: #F8F8F2"> fm</span>
 <span style="color: #FF4689">from</span><span style="color: #F8F8F2"> sklearn.decomposition </span><span style="color: #FF4689">import</span> <span style="color: #F8F8F2">PCA</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">SKPCA</span>
 <span style="color: #FF4689">import</span><span style="color: #F8F8F2"> io</span>
-<span style="color: #FF4689">import</span><span style="color: #F8F8F2"> json</span>
-
 
 
 <span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">pca</span><span style="color: #F8F8F2">(options):</span>
 
-    <span style="color: #959077"># JsProxy（来自 JS 调用）需转为 Python dict；Python 直接调用则已是 dict</span>
     <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">isinstance(options,</span> <span style="color: #F8F8F2">dict):</span>
         <span style="color: #F8F8F2">options</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_py()</span>
     <span style="color: #F8F8F2">n_components</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;n_components&#39;</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">or</span> <span style="color: #66D9EF">None</span>
+    <span style="color: #F8F8F2">data_path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;data_path&#39;</span><span style="color: #F8F8F2">)</span>
 
-    <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #66D9EF">with</span> <span style="color: #F8F8F2">open(</span><span style="color: #E6DB74">&#39;/home/pyodide/upload_meta.json&#39;</span><span style="color: #F8F8F2">)</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">f:</span>
-            <span style="color: #F8F8F2">meta</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">json</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">load(f)</span>
-    <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span><span style="color: #F8F8F2">:</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">data_path:</span>
         <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;请先在左侧上传数据文件&quot;</span><span style="color: #F8F8F2">}</span>
 
-    <span style="color: #F8F8F2">sheet</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">meta[</span><span style="color: #E6DB74">&#39;sheets&#39;</span><span style="color: #F8F8F2">][</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span>
-    <span style="color: #F8F8F2">csv_path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">sheet[</span><span style="color: #E6DB74">&#39;path&#39;</span><span style="color: #F8F8F2">]</span>
     <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(csv_path)</span>
+        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(data_path)</span>
     <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">e:</span>
         <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&quot;读取数据失败: {</span><span style="color: #F8F8F2">e</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">}</span>
-
-    <span style="color: #959077"># ----- 处理缺失值 START -----</span>
-    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">isnull()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">any()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">any():</span>
-        <span style="color: #FF4689">from</span><span style="color: #F8F8F2"> sklearn.impute </span><span style="color: #FF4689">import</span> <span style="color: #F8F8F2">SimpleImputer</span>
-        <span style="color: #F8F8F2">imputer</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">SimpleImputer(strategy</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;mean&#39;</span><span style="color: #F8F8F2">)</span>   <span style="color: #959077"># 也可用 &#39;median&#39;, &#39;most_frequent&#39;</span>
-        <span style="color: #F8F8F2">df_imputed</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">imputer</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">fit_transform(df)</span>
-        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame(df_imputed,</span> <span style="color: #F8F8F2">columns</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns)</span>
-    <span style="color: #959077"># ----- 处理缺失值 END -----</span>
 
     <span style="color: #F8F8F2">first_col</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span>
     <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">df[first_col]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">dtype</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;object&#39;</span><span style="color: #F8F8F2">:</span>
@@ -1853,10 +1670,10 @@ window.MODULE_HTML = {
             <span style="color: #E6DB74">&quot;PC num&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">n_components,</span>
             <span style="color: #E6DB74">&quot;Cumulative variance&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">cum_var[</span><span style="color: #FF4689">-</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]</span><span style="color: #E6DB74">:.1%}&quot;</span>
         <span style="color: #F8F8F2">},</span>
-        <span style="color: #E6DB74">&quot;table&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">table,</span>
-        <span style="color: #E6DB74">&quot;table_header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">table_header,</span>
-        <span style="color: #E6DB74">&quot;scores_table&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">scores_table,</span>
-        <span style="color: #E6DB74">&quot;scores_header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">scores_header,</span>
+        <span style="color: #E6DB74">&quot;tables&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span>
+            <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">table_header,</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">table},</span>
+            <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">scores_header,</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">scores_table},</span>
+        <span style="color: #F8F8F2">],</span>
     <span style="color: #F8F8F2">}</span>
 </code></pre>
     </div>
@@ -1929,11 +1746,9 @@ window.MODULE_HTML = {
   </div>
 
     <script type="text/python-src" data-module="DataClean">
-import io
-import json
 import os
 import re
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -1942,39 +1757,81 @@ from sklearn.preprocessing import StandardScaler
 
 
 # 数据清洗
-
-def clean_to_numeric(x) -> Union[float, np.nan]:
-    """将单个值转为数字：处理货币符号、百分号、逗号、全角数字等"""
-    if pd.isna(x):
-        return np.nan
-    if isinstance(x, (int, float)):
-        return x
-    s = str(x).strip()
-    s = re.sub(r'[$€¥%]', '', s)           # 移除货币符号和百分号
-    s = s.replace(',', '').replace(' ', '') # 移除千位分隔符和空格
-    s = s.translate(str.maketrans('０１２３４５６７８９', '0123456789'))  # 全角转半角
-    try:
-        return pd.to_numeric(s)
-    except Exception:
-        return np.nan
+def _clean_series_numeric(series: pd.Series) -> pd.Series:
+    """
+    向量化清洗单个 Series 中的数值格式：
+    - 货币符号（$€¥£₹等）
+    - 百分号（转除以100）
+    - 千位分隔符（逗号、空格）
+    - 全角数字、全角负号/小数点
+    - 括号负数 -> 负号
+    """
+    # 先尝试直接转为数值
+    numeric = pd.to_numeric(series, errors='coerce', downcast='float')
+    
+    # 未被转换成功的索引
+    failed_mask = numeric.isna() & series.notna()
+    if not failed_mask.any():
+        return numeric
+    
+    # 对失败的条目进行字符串清理
+    failed_vals = series[failed_mask].astype(str).str.strip()
+    
+    # 1. 全角负号和小数点映射
+    fullwidth_map = str.maketrans('－．', '-.')
+    failed_vals = failed_vals.str.translate(fullwidth_map)
+    
+    # 2. 全角数字转半角
+    fullwidth_digits = str.maketrans('０１２３４５６７８９', '0123456789')
+    failed_vals = failed_vals.str.translate(fullwidth_digits)
+    
+    # 3. 移除货币符号
+    currency_pattern = r'[$€¥£₹]'
+    failed_vals = failed_vals.str.replace(currency_pattern, '', regex=True)
+    
+    # 4. 处理括号负数： (123.45) -> -123.45
+    failed_vals = failed_vals.str.replace(r'^\((.*)\)$', r'-\1', regex=True)
+    
+    # 5. 移除百分号并除以100
+    pct_mask = failed_vals.str.contains(r'%', na=False)
+    failed_vals = failed_vals.str.replace(r'%', '', regex=True)
+    
+    # 6. 移除千位分隔符（逗号）和空格（只移除数字内部的空格，保守处理）
+    failed_vals = failed_vals.str.replace(',', '', regex=False)
+    failed_vals = failed_vals.str.replace(' ', '', regex=False)
+    
+    # 第二次转数值
+    cleaned_numeric = pd.to_numeric(failed_vals, errors='coerce', downcast='float')
+    
+    # 百分比除以100
+    if pct_mask.any():
+        # pct_mask 索引对应原始 failed_mask 内的子集，需要对齐
+        # 在 cleaned_numeric 上，根据原始的带%标记来调整
+        pct_mask_full = failed_mask.copy()
+        pct_mask_full[failed_mask] = pct_mask
+        numeric.loc[pct_mask_full] = cleaned_numeric.loc[pct_mask] / 100.0
+    else:
+        numeric.loc[failed_mask] = cleaned_numeric
+    
+    return numeric
 
 
 def clean_dataframe(
     df: pd.DataFrame,
     name_col_index: Union[int, str] = 0,
     missing_strategy: str = "mean",
-    standardize = True
-) -> pd.DataFrame :
+    standardize: bool = True
+) -> pd.DataFrame:
     """
     清洗数据框中的数值列，保留一列标识列（如名称）。
-
+ 
     参数:
         df: 原始 DataFrame
         name_col_index: 标识列的索引（整数位置）或列名
         missing_strategy: 缺失值处理策略，'drop' 或 sklearn SimpleImputer 支持的策略
         standardize: 是否标准化
 
-    返回:   clean_df
+    返回: clean_df
     """
     # 标识列处理
     if isinstance(name_col_index, str):
@@ -1986,8 +1843,10 @@ def clean_dataframe(
         name_data = df[[name_col]]
         numeric_cols = [c for i, c in enumerate(df.columns) if i != name_col_index]
 
-    # 转换数值列
-    numeric_df = df[numeric_cols].applymap(clean_to_numeric)
+    # 向量化转换数值列
+    numeric_df = pd.DataFrame(index=df.index)
+    for col in numeric_cols:
+        numeric_df[col] = _clean_series_numeric(df[col])
 
     # 缺失值处理
     if missing_strategy == "drop":
@@ -1997,6 +1856,13 @@ def clean_dataframe(
         imputer = SimpleImputer(strategy=missing_strategy)
         numeric_array = imputer.fit_transform(numeric_df)
         numeric_df = pd.DataFrame(numeric_array, columns=numeric_df.columns, index=numeric_df.index)
+   
+    # 删除填充后残留的空缺值
+    nan_rows_before = numeric_df.isna().any(axis=1).sum()
+    if nan_rows_before > 0:
+        numeric_df = numeric_df.dropna()
+        name_data = name_data.loc[numeric_df.index]
+        print(f"警告：填充后仍有 {nan_rows_before} 行包含 NaN，已删除。")
 
     # 标准化
     if standardize:
@@ -2010,155 +1876,30 @@ def clean_dataframe(
     return result
 
 
-# ----------------------------------------------------------------------
-# 文件上传 & 多 sheet 加载（原 Clustering.py 中的逻辑）
-# ----------------------------------------------------------------------
+def auto_clean(input_path: str, output_path: str = None) -> str:
+    """从 input_path 读 CSV，自动清洗后写入 output_path。
 
-UPLOAD_NAME_PATH = "/home/pyodide/upload_name.txt"
-UPLOAD_META_PATH = "/home/pyodide/upload_meta.json"
-DATA_DIR = "/home/pyodide"
+    自动检测编码与分隔符，先做类型转换（clean_to_numeric），
+    再用均值填补缺失值（不做标准化）。
 
-
-def get_upload_meta() -> Tuple[str, str]:
-    """返回 (数据文件路径, 扩展名)"""
-    if os.path.exists(UPLOAD_META_PATH):
-        try:
-            meta = json.loads(open(UPLOAD_META_PATH, "r", encoding="utf-8").read())
-            sheets = meta.get("sheets", [])
-            if sheets:
-                return sheets[0]["path"], "csv"
-        except Exception:
-            pass
-
-    if os.path.exists(UPLOAD_NAME_PATH):
-        with open(UPLOAD_NAME_PATH, "r", encoding="utf-8") as f:
-            original_name = f.read().strip()
-        ext = (original_name.split(".")[-1] if "." in original_name else "csv").lower()
-        path = os.path.join(DATA_DIR, f"data.{ext}")
-    else:
-        path = os.path.join(DATA_DIR, "data.csv")
-        ext = "csv"
-
-    if not os.path.exists(path):
-        raise ValueError("未检测到上传文件，请先上传 CSV/Excel 文件。")
-    return path, ext
-
-
-def load_dataframe_from_upload(sheet_name: Optional[str] = None) -> pd.DataFrame:
-    """从上传路径加载 DataFrame（CSV，自动检测编码与分隔符）"""
-    path, _ = get_upload_meta()
+    返回: output_path
+    """
+    df = None
     for enc in ("utf-8", "utf-8-sig", "gbk", "gb18030"):
         try:
-            return pd.read_csv(path, encoding=enc, sep=None, engine="python")
+            df = pd.read_csv(input_path, encoding=enc, sep=None, engine="python")
+            break
         except Exception:
             continue
-    raise ValueError("CSV 解析失败，请检查编码/分隔符，或改存为 UTF-8 CSV 后重试。")
+    if df is None:
+        raise ValueError(f"无法读取文件: {input_path}")
 
-
-def load_numeric_data(sheet_name: Optional[str] = None) -> pd.DataFrame:
-    """
-    从上传文件加载数值数据。
-    """
-    df = load_dataframe_from_upload(sheet_name=sheet_name)
-    num_df = clean_dataframe(df)
-    if num_df.empty:
-        raise ValueError("未检测到可用于聚类的数值列，请上传包含数值列的 CSV/Excel。")
-    return num_df
-
-
-def load_multi_sheets(
-    sheet_selector: str = "",
-    name_col_index: Union[int, str] = 0,
-    missing_strategy: str = "mean",
-    standardize: bool = True,
-) -> List[Tuple[str, pd.DataFrame]]:
-    """
-    根据 sheet_selector 加载多个 sheet 的数据，并对每个 sheet 应用统一的清洗流程。
-
-    参数:
-        sheet_selector: 逗号分隔的 sheet 序号（从1开始），例如 "1,3"。为空时只加载第一个 sheet。
-        name_col_index: 标识列的索引（整数位置）或列名，将保留此列不参与数值转换。
-        missing_strategy: 缺失值处理策略，'drop' 或 sklearn SimpleImputer 支持的策略。
-        standardize: 是否对数值列进行标准化。
-
-    返回:
-        List[Tuple[str, pd.DataFrame]]，每个元素为 (sheet名称, 清洗后的DataFrame)。
-
-    异常:
-        ValueError: 当元数据缺失、sheet序号越界、文件读取失败或无可用于聚类的数值列时抛出。
-    """
-    if not os.path.exists(UPLOAD_META_PATH):
-        # 没有元数据时回退到单 sheet 行为（兼容旧上传）
-        df = load_numeric_data()  # 使用默认清洗参数
-        return [("sheet1", df)]
-
-    try:
-        with open(UPLOAD_META_PATH, "r", encoding="utf-8") as f:
-            meta = json.load(f)
-    except Exception as e:
-        raise ValueError(f"上传元信息读取失败: {e}") from e
-
-    sheets = meta.get("sheets", [])
-    if not sheets:
-        # meta 存在但无 sheets 信息，仍回退到单 sheet
-        df = load_numeric_data()
-        return [("sheet1", df)]
-
-    # 解析 sheet 选择器
-    if not sheet_selector:
-        chosen_indices = [0]
-    else:
-        chosen_indices = []
-        for token in sheet_selector.split(","):
-            token = token.strip()
-            if not token:
-                continue
-            try:
-                idx = int(token) - 1  # 转换为 0‑based
-            except ValueError:
-                raise ValueError(f"无效的 sheet 序号: '{token}'，应为整数")
-            if idx < 0 or idx >= len(sheets):
-                raise ValueError(f"sheet 序号越界: {idx+1}，有效范围 1~{len(sheets)}")
-            chosen_indices.append(idx)
-        if not chosen_indices:
-            chosen_indices = [0]
-
-    results: List[Tuple[str, pd.DataFrame]] = []
-    for idx in chosen_indices:
-        sheet_info = sheets[idx]
-        sheet_name = sheet_info.get("name", f"sheet{sheet_info.get('index', idx+1)}")
-        sheet_path = sheet_info.get("path")
-        if not sheet_path:
-            raise ValueError(f"sheet '{sheet_name}' 缺少 path 信息")
-
-        # 读取 CSV（尝试多种编码与自动分隔符）
-        df_raw = None
-        for enc in ("utf-8", "utf-8-sig", "gbk", "gb18030"):
-            try:
-                df_raw = pd.read_csv(sheet_path, encoding=enc, sep=None, engine="python")
-                break
-            except Exception:
-                continue
-        if df_raw is None:
-            raise ValueError(f"sheet '{sheet_name}' CSV 解析失败，请检查编码/分隔符")
-
-        # 应用与 load_numeric_data 完全一致的清洗流程
-        try:
-            cleaned_df = clean_dataframe(
-                df_raw,
-                name_col_index=name_col_index,
-                missing_strategy=missing_strategy,
-                standardize=standardize,
-            )
-        except Exception as e:
-            raise ValueError(f"sheet '{sheet_name}' 数据清洗失败: {e}") from e
-
-        if cleaned_df.empty:
-            raise ValueError(f"sheet '{sheet_name}' 清洗后无有效数据，可能缺少数值列或全部为缺失值")
-
-        results.append((sheet_name, cleaned_df))
-
-    return results
+    cleaned = clean_dataframe(df, standardize=False)
+    if output_path is None:
+        base, ext = os.path.splitext(input_path)
+        output_path = f"{base}.cleaned{ext}"
+    cleaned.to_csv(output_path, index=False, encoding="utf-8-sig")
+    return output_path
   </script>
 
   <script type="text/python-src" data-module="CanonicalCorrelation">
@@ -2167,8 +1908,6 @@ def load_multi_sheets(
 
   <script type="text/python-src" data-module="Clustering">
 import io
-import json
-import os
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -2179,54 +1918,15 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 
 
-UPLOAD_NAME_PATH = "/home/pyodide/upload_name.txt"
-UPLOAD_META_PATH = "/home/pyodide/upload_meta.json"
-DATA_DIR = "/home/pyodide"
 HIERARCHICAL_METHODS = ["single", "complete", "average", "centroid", "median", "ward"]
 
 
-def _read_numeric_data(sheet_name=None) -> Tuple[pd.DataFrame, np.ndarray]:
-    df = _load_uploaded_dataframe(sheet_name=sheet_name)
+def _read_numeric_data(data_path: str) -> Tuple[pd.DataFrame, np.ndarray]:
+    df = pd.read_csv(data_path)
     num_df = df.select_dtypes(include=[np.number]).dropna(axis=0)
     if num_df.empty:
         raise ValueError("未检测到可用于聚类的数值列，请上传包含数值列的 CSV/Excel。")
     return df, num_df.to_numpy(dtype=float)
-
-
-def _get_upload_meta() -> Tuple[str, str]:
-    if os.path.exists(UPLOAD_META_PATH):
-        try:
-            meta = json.loads(open(UPLOAD_META_PATH, "r", encoding="utf-8").read())
-            sheets = meta.get("sheets", [])
-            if sheets:
-                return sheets[0]["path"], "csv"
-        except Exception:
-            pass
-
-    if os.path.exists(UPLOAD_NAME_PATH):
-        with open(UPLOAD_NAME_PATH, "r", encoding="utf-8") as f:
-            original_name = f.read().strip()
-        ext = (original_name.split(".")[-1] if "." in original_name else "csv").lower()
-        path = os.path.join(DATA_DIR, f"data.{ext}")
-    else:
-        path = os.path.join(DATA_DIR, "data.csv")
-        ext = "csv"
-
-    if not os.path.exists(path):
-        raise ValueError("未检测到上传文件，请先上传 CSV/Excel 文件。")
-    return path, ext
-
-
-def _load_uploaded_dataframe(sheet_name=None) -> pd.DataFrame:
-    path, ext = _get_upload_meta()
-
-    for enc in ("utf-8", "utf-8-sig", "gbk", "gb18030"):
-        try:
-            return pd.read_csv(path, encoding=enc, sep=None, engine="python")
-        except Exception:
-            continue
-
-    raise ValueError("CSV 解析失败，请检查编码/分隔符，或改存为 UTF-8 CSV 后重试。")
 
 
 def _standardize(x: np.ndarray) -> np.ndarray:
@@ -2327,38 +2027,33 @@ def _cluster_table_from_centers(labels: np.ndarray, centers: np.ndarray) -> Tupl
     return header, rows
 
 
-def analyze(
-    options=None,
-    algorithm: str = "kmeans",
-    n_clusters: int = 3,
-    init: str = "k-means++",
-    max_iter: int = 300,
-) -> Dict[str, object]:
-    """前端默认入口：支持 KMeans 与系统聚类。
-
-    优先兼容 README 推荐的 analyze(options: dict) 形式。
-    """
+def analyze(options=None) -> Dict[str, object]:
     if options is not None and not isinstance(options, dict):
         to_py = getattr(options, "to_py", None)
         if callable(to_py):
             options = to_py()
 
+    algorithm = "kmeans"
+    n_clusters = 3
+    init = "k-means++"
+    max_iter = 300
+    loss = "lloyd"
+    plot_type = "scatter"
+    data_path = None
+
     if isinstance(options, dict):
-        algorithm = options.get("algorithm", algorithm)
-        n_clusters = options.get("n_clusters", n_clusters)
+        algorithm = str(options.get("algorithm", algorithm)).strip().lower()
+        n_clusters = int(options.get("n_clusters", n_clusters))
         init = options.get("init", init)
-        max_iter = options.get("max_iter", max_iter)
+        max_iter = int(options.get("max_iter", max_iter))
         loss = str(options.get("loss", "lloyd")).strip().lower()
         plot_type = str(options.get("plot_type", "scatter")).strip().lower()
-    else:
-        loss = "lloyd"
-        plot_type = "scatter"
+        data_path = options.get("data_path")
 
-    sheet_selector = ""
-    if isinstance(options, dict):
-        sheet_selector = str(options.get("sheet_selector", "")).strip()
+    if not data_path:
+        return {"error": "请先在左侧上传数据文件"}
 
-    dataset_list = _prepare_datasets(sheet_selector)
+    dataset_list = _prepare_datasets(data_path)
     n_clusters = max(2, int(n_clusters))
     max_iter = max(10, int(max_iter))
     algorithm = str(algorithm).strip().lower()
@@ -2426,75 +2121,33 @@ def analyze(
                 center_strs.extend([""] * (kmeans_max_dim - len(center_strs)))
             detail_rows.append([sheet_label, str(cluster_id), str(sample_count)] + center_strs)
 
+    summary_header = ["sheet", "轮廓系数", "CH 指数", "DB 指数", "簇内平方和"]
     return {
         "svg": svgs[0] if svgs else "",
         "svgs": svgs,
         "metrics": metrics_first,
-        "table_header": detail_header or ["sheet", "信息"],
-        "table": detail_rows or [["-", "无结果"]],
-        "summary_header": ["sheet", "轮廓系数", "CH 指数", "DB 指数", "簇内平方和"],
-        "summary_table": summary_rows,
+        "tables": [
+            {"header": detail_header or ["sheet", "信息"], "rows": detail_rows or [["-", "无结果"]]},
+            {"header": summary_header, "rows": summary_rows},
+        ],
     }
 
 
-def _prepare_datasets(sheet_selector: str) -> List[Tuple[str, np.ndarray]]:
-    if not os.path.exists(UPLOAD_META_PATH):
-        _, x = _read_numeric_data()
-        return [("sheet1", x)]
-    try:
-        meta = json.loads(open(UPLOAD_META_PATH, "r", encoding="utf-8").read())
-    except Exception as e:
-        raise ValueError(f"上传元信息读取失败: {e}") from e
-    sheets = meta.get("sheets", [])
-    if not sheets:
-        _, x = _read_numeric_data()
-        return [("sheet1", x)]
-    names = [s.get("name", f"sheet{s.get('index', i+1)}") for i, s in enumerate(sheets)]
-
-    if not sheet_selector:
-        chosen_idx = [0]
-    else:
-        chosen_idx = []
-        for token in sheet_selector.split(","):
-            t = token.strip()
-            if not t:
-                continue
-            i = int(t)
-            if i < 1 or i > len(sheets):
-                raise ValueError(f"sheet 序号越界: {i}，有效范围 1~{len(names)}")
-            chosen_idx.append(i - 1)
-        if not chosen_idx:
-            chosen_idx = [0]
-
-    datasets: List[Tuple[str, np.ndarray]] = []
-    for i in chosen_idx:
-        s = sheets[i]
-        sname = s.get("name", f"sheet{s.get('index', i+1)}")
-        path = s.get("path")
-        if not path:
-            raise ValueError(f"sheet '{sname}' 缺少 path 信息。")
-        df = None
-        for enc in ("utf-8", "utf-8-sig", "gbk", "gb18030"):
-            try:
-                df = pd.read_csv(path, encoding=enc, sep=None, engine="python")
-                break
-            except Exception:
-                continue
-        if df is None:
-            raise ValueError(f"sheet '{sname}' CSV 解析失败。")
-        num_df = df.select_dtypes(include=[np.number]).dropna(axis=0)
-        if num_df.empty:
-            raise ValueError(f"sheet '{sname}' 未检测到可用于聚类的数值列。")
-        datasets.append((sname, num_df.to_numpy(dtype=float)))
-    return datasets
+def _prepare_datasets(data_path: str) -> List[Tuple[str, np.ndarray]]:
+    df = pd.read_csv(data_path)
+    num_df = df.select_dtypes(include=[np.number]).dropna(axis=0)
+    if num_df.empty:
+        raise ValueError("未检测到可用于聚类的数值列。")
+    return [("data", num_df.to_numpy(dtype=float))]
 
 
-def hierarchical(method: str = "ward", n_clusters: int = 3) -> Dict[str, object]:
-    """系统聚类：single/complete/average/centroid/median/ward。"""
+def hierarchical(method: str = "ward", n_clusters: int = 3, data_path: str = None) -> Dict[str, object]:
+    if not data_path:
+        return {"error": "请先上传数据文件"}
     method = method.lower().strip()
     if method not in HIERARCHICAL_METHODS:
         raise ValueError(f"method 必须为 {HIERARCHICAL_METHODS} 之一")
-    _, x = _read_numeric_data()
+    _, x = _read_numeric_data(data_path)
     x_std = _standardize(x)
     x2 = _pca2(x_std)
     z = linkage(x_std, method=method)
@@ -2506,14 +2159,14 @@ def hierarchical(method: str = "ward", n_clusters: int = 3) -> Dict[str, object]
     return {
         "svg": _svg_scatter(x2, labels, f"系统聚类({method}) 结果 (K={n_clusters})"),
         "metrics": metrics,
-        "table_header": header,
-        "table": rows,
+        "tables": [{"header": header, "rows": rows}],
     }
 
 
-def analyze_all_methods(n_clusters: int = 3) -> Dict[str, object]:
-    """汇总 notebook 中全部聚类方法的指标。"""
-    _, x = _read_numeric_data()
+def analyze_all_methods(n_clusters: int = 3, data_path: str = None) -> Dict[str, object]:
+    if not data_path:
+        return {"error": "请先上传数据文件"}
+    _, x = _read_numeric_data(data_path)
     x_std = _standardize(x)
 
     results: List[List[str]] = []
@@ -2528,8 +2181,7 @@ def analyze_all_methods(n_clusters: int = 3) -> Dict[str, object]:
     results.append(["kmeans", m["silhouette"], m["ch"], m["db"], f"{km.inertia_:.4f}"])
 
     return {
-        "table_header": ["方法", "轮廓系数", "CH 指数", "DB 指数", "簇内平方和"],
-        "table": results,
+        "tables": [{"header": ["方法", "轮廓系数", "CH 指数", "DB 指数", "簇内平方和"], "rows": results}],
     }
 
   </script>
@@ -2548,20 +2200,11 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 from io import BytesIO
-import json
-# from __DataClean import clean_data
 
 
-def _read_data():
-    try:
-        with open('/home/pyodide/upload_meta.json') as f:
-            meta = json.load(f)
-    except Exception:
-        raise ValueError("请先在左侧上传数据文件")
-    path = meta['sheets'][0]['path']
-    print(f'[Evaluation] 读取: {path}')
-    df = pd.read_csv(path)
-    df = clean_data(df)
+def _read_data(data_path):
+    print(f'[Evaluation] 读取: {data_path}')
+    df = pd.read_csv(data_path)
     print(f'[Evaluation] 数据形状: {df.shape}')
     return df
 
@@ -2574,9 +2217,12 @@ def _ensure_dict(obj):
 
 def descriptive(options):
     options = _ensure_dict(options)
+    data_path = options.get('data_path')
+    if not data_path:
+        return {"error": "请先在左侧上传数据文件"}
     print(f'[描述性统计] 参数: column={options.get("column", "全部")}')
     try:
-        df = _read_data()
+        df = _read_data(data_path)
         column = options.get('column') or None
 
         if column and column in df.columns:
@@ -2585,19 +2231,19 @@ def descriptive(options):
                 return {"error": f"列 '{column}' 没有有效数据"}
             s = _calc_stats(data)
             print(f'[描述性统计] {column}: 均值={s["mean"]}, 标准差={s["std"]}, 样本量={s["n"]}')
+            desc_table = [
+                ['样本量', s['n']],
+                ['均值', s['mean']],
+                ['中位数', s['median']],
+                ['标准差', s['std']],
+                ['方差', s['var']],
+                ['最小值', s['min']],
+                ['最大值', s['max']],
+                ['偏度', s['skew']],
+                ['峰度', s['kurtosis']],
+            ]
             return {
-                "table": [
-                    ['样本量', s['n']],
-                    ['均值', s['mean']],
-                    ['中位数', s['median']],
-                    ['标准差', s['std']],
-                    ['方差', s['var']],
-                    ['最小值', s['min']],
-                    ['最大值', s['max']],
-                    ['偏度', s['skew']],
-                    ['峰度', s['kurtosis']],
-                ],
-                "table_header": ['统计指标', column],
+                "tables": [{"header": ['统计指标', column], "rows": desc_table}],
                 "metrics": {"样本量": s['n'], "均值": s['mean'], "中位数": s['median'], "标准差": s['std']},
             }
 
@@ -2625,8 +2271,7 @@ def descriptive(options):
 
         print(f'[描述性统计] 完成: {len(results)} 个数值变量')
         return {
-            "table": table,
-            "table_header": table_header,
+            "tables": [{"header": table_header, "rows": table}],
             "metrics": {"样本量": len(df), "均值": len(numeric_cols), "中位数": "", "标准差": ""},
         }
     except Exception as e:
@@ -2649,9 +2294,12 @@ def _calc_stats(data):
 
 def normality(options):
     options = _ensure_dict(options)
+    data_path = options.get('data_path')
+    if not data_path:
+        return {"error": "请先在左侧上传数据文件"}
     print(f'[正态性检验] 参数: column={options.get("column", "全部")}, alpha={options.get("alpha", 0.05)}')
     try:
-        df = _read_data()
+        df = _read_data(data_path)
         column = options.get('column') or None
         alpha = float(options.get('alpha', 0.05))
 
@@ -2669,11 +2317,10 @@ def normality(options):
                         "statistic": round(stat, 4), "p_value": round(p, 4),
                         "is_normal": "是" if p >= alpha else "否",
                     })
-            table = [[r['name'], r['n'], r['statistic'], r['p_value'], r['is_normal']] for r in results]
+            norm_table = [[r['name'], r['n'], r['statistic'], r['p_value'], r['is_normal']] for r in results]
             print(f'[正态性检验] 完成: {len(results)} 个变量')
             return {
-                "table": table,
-                "table_header": ['变量名', '样本量', 'W统计量', 'p值', '正态分布'],
+                "tables": [{"header": ['变量名', '样本量', 'W统计量', 'p值', '正态分布'], "rows": norm_table}],
                 "metrics": {"W统计量": len(results), "p值": alpha, "正态性": f"{len(results)}个变量", "显著性水平": alpha},
             }
 
@@ -2688,12 +2335,12 @@ def normality(options):
         is_normal = p >= alpha
         svg = _generate_qq_plot(data, column)
         print(f'[正态性检验] {column}: W={stat:.4f}, p={p:.4f}, {"服从" if is_normal else "不服从"}正态分布')
+        norm_table = [
+            ['Shapiro-Wilk检验', round(stat, 4), round(p, 4),
+             f"{'服从正态分布' if is_normal else '不服从正态分布'} (α={alpha})"],
+        ]
         return {
-            "table": [
-                ['Shapiro-Wilk检验', round(stat, 4), round(p, 4),
-                 f"{'服从正态分布' if is_normal else '不服从正态分布'} (α={alpha})"],
-            ],
-            "table_header": ['检验项目', '统计量', 'p值', '结论'],
+            "tables": [{"header": ['检验项目', '统计量', 'p值', '结论'], "rows": norm_table}],
             "svg": svg,
             "metrics": {"W统计量": round(stat, 4), "p值": round(p, 4), "正态性": "服从" if is_normal else "不服从", "显著性水平": alpha},
         }
@@ -2720,9 +2367,12 @@ def _generate_qq_plot(data, name):
 
 def anova(options):
     options = _ensure_dict(options)
+    data_path = options.get('data_path')
+    if not data_path:
+        return {"error": "请先在左侧上传数据文件"}
     print(f'[方差分析] 参数: dependent_var={options.get("dependent_var")}, group_var={options.get("group_var")}')
     try:
-        df = _read_data()
+        df = _read_data(data_path)
         dependent = options.get('dependent_var') or None
         group = options.get('group_var') or None
 
@@ -2771,10 +2421,10 @@ def anova(options):
         is_sig = p_value < 0.05
         print(f'[方差分析] {dependent} ~ {group}: F({df_between},{df_within})={f_stat:.4f}, p={p_value:.4f}, {"显著" if is_sig else "不显著"}')
         return {
-            "table": table,
-            "table_header": ['组别', '样本量', '均值', '标准差'],
-            "anova_table": anova_table,
-            "anova_table_header": anova_header,
+            "tables": [
+                {"header": ['组别', '样本量', '均值', '标准差'], "rows": table},
+                {"header": anova_header, "rows": anova_table},
+            ],
             "svg": svg,
             "metrics": {"F值": round(f_stat, 4), "p值": round(p_value, 4), "显著性": "显著" if is_sig else "不显著", "组数": len(groups)},
         }
@@ -2813,10 +2463,6 @@ def _generate_boxplot(df, dependent, group):
 # 此处存放 因子分析 代码
   </script>
 
-  <script type="text/python-src" data-module="File">
-# 此文件处理文件上传逻辑
-  </script>
-
   <script type="text/python-src" data-module="Pca">
 import pandas as pd
 import numpy as np
@@ -2824,37 +2470,22 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 from sklearn.decomposition import PCA as SKPCA
 import io
-import json
-
 
 
 def pca(options):
 
-    # JsProxy（来自 JS 调用）需转为 Python dict；Python 直接调用则已是 dict
     if not isinstance(options, dict):
         options = options.to_py()
     n_components = options.get('n_components') or None
+    data_path = options.get('data_path')
 
-    try:
-        with open('/home/pyodide/upload_meta.json') as f:
-            meta = json.load(f)
-    except Exception:
+    if not data_path:
         return {"error": "请先在左侧上传数据文件"}
 
-    sheet = meta['sheets'][0]
-    csv_path = sheet['path']
     try:
-        df = pd.read_csv(csv_path)
+        df = pd.read_csv(data_path)
     except Exception as e:
         return {"error": f"读取数据失败: {e}"}
-
-    # ----- 处理缺失值 START -----
-    if df.isnull().any().any():
-        from sklearn.impute import SimpleImputer
-        imputer = SimpleImputer(strategy='mean')   # 也可用 'median', 'most_frequent'
-        df_imputed = imputer.fit_transform(df)
-        df = pd.DataFrame(df_imputed, columns=df.columns)
-    # ----- 处理缺失值 END -----
 
     first_col = df.columns[0]
     if df[first_col].dtype == 'object':
@@ -3017,10 +2648,10 @@ def pca(options):
             "PC num": n_components,
             "Cumulative variance": f"{cum_var[-1]:.1%}"
         },
-        "table": table,
-        "table_header": table_header,
-        "scores_table": scores_table,
-        "scores_header": scores_header,
+        "tables": [
+            {"header": table_header, "rows": table},
+            {"header": scores_header, "rows": scores_table},
+        ],
     }
 
   </script>

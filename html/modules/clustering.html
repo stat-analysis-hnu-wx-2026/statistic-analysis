@@ -45,10 +45,6 @@
         <input class="fake-select-control" data-param="max_iter" type="number" min="50" max="2000" value="300">
       </div>
       <div class="param-field">
-        <label>Excel sheet 序号</label>
-        <input class="fake-select-control" data-param="sheet_selector" type="text" value="1" placeholder="例如: 1 或 1,3,5">
-      </div>
-      <div class="param-field">
         <label>图形类型</label>
         <select class="fake-select-control" data-param="plot_type">
           <option value="scatter" selected>Scatter</option>
@@ -94,6 +90,17 @@
     </div>
     <table class="simple-table">
       <thead><tr><th>簇</th><th>样本数</th><th>中心 1</th><th>中心 2</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-clipboard-list"></i> 各聚类指标</span>
+      <span class="badge">评价指标</span>
+    </div>
+    <table class="simple-table">
+      <thead><tr><th>sheet</th><th>轮廓系数</th><th>CH 指数</th><th>DB 指数</th><th>簇内平方和</th></tr></thead>
       <tbody></tbody>
     </table>
   </div>

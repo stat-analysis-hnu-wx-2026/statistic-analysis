@@ -4,37 +4,22 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 from sklearn.decomposition import PCA as SKPCA
 import io
-import json
-
 
 
 def pca(options):
 
-    # JsProxy（来自 JS 调用）需转为 Python dict；Python 直接调用则已是 dict
     if not isinstance(options, dict):
         options = options.to_py()
     n_components = options.get('n_components') or None
+    data_path = options.get('data_path')
 
-    try:
-        with open('/home/pyodide/upload_meta.json') as f:
-            meta = json.load(f)
-    except Exception:
+    if not data_path:
         return {"error": "请先在左侧上传数据文件"}
 
-    sheet = meta['sheets'][0]
-    csv_path = sheet['path']
     try:
-        df = pd.read_csv(csv_path)
+        df = pd.read_csv(data_path)
     except Exception as e:
         return {"error": f"读取数据失败: {e}"}
-
-    # ----- 处理缺失值 START -----
-    if df.isnull().any().any():
-        from sklearn.impute import SimpleImputer
-        imputer = SimpleImputer(strategy='mean')   # 也可用 'median', 'most_frequent'
-        df_imputed = imputer.fit_transform(df)
-        df = pd.DataFrame(df_imputed, columns=df.columns)
-    # ----- 处理缺失值 END -----
 
     first_col = df.columns[0]
     if df[first_col].dtype == 'object':
@@ -197,8 +182,8 @@ def pca(options):
             "PC num": n_components,
             "Cumulative variance": f"{cum_var[-1]:.1%}"
         },
-        "table": table,
-        "table_header": table_header,
-        "scores_table": scores_table,
-        "scores_header": scores_header,
+        "tables": [
+            {"header": table_header, "rows": table},
+            {"header": scores_header, "rows": scores_table},
+        ],
     }

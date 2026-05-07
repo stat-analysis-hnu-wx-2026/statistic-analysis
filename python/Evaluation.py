@@ -3,20 +3,11 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 from io import BytesIO
-import json
-# from __DataClean import clean_data
 
 
-def _read_data():
-    try:
-        with open('/home/pyodide/upload_meta.json') as f:
-            meta = json.load(f)
-    except Exception:
-        raise ValueError("请先在左侧上传数据文件")
-    path = meta['sheets'][0]['path']
-    print(f'[Evaluation] 读取: {path}')
-    df = pd.read_csv(path)
-    df = clean_data(df)
+def _read_data(data_path):
+    print(f'[Evaluation] 读取: {data_path}')
+    df = pd.read_csv(data_path)
     print(f'[Evaluation] 数据形状: {df.shape}')
     return df
 
@@ -29,9 +20,12 @@ def _ensure_dict(obj):
 
 def descriptive(options):
     options = _ensure_dict(options)
+    data_path = options.get('data_path')
+    if not data_path:
+        return {"error": "请先在左侧上传数据文件"}
     print(f'[描述性统计] 参数: column={options.get("column", "全部")}')
     try:
-        df = _read_data()
+        df = _read_data(data_path)
         column = options.get('column') or None
 
         if column and column in df.columns:
@@ -40,19 +34,19 @@ def descriptive(options):
                 return {"error": f"列 '{column}' 没有有效数据"}
             s = _calc_stats(data)
             print(f'[描述性统计] {column}: 均值={s["mean"]}, 标准差={s["std"]}, 样本量={s["n"]}')
+            desc_table = [
+                ['样本量', s['n']],
+                ['均值', s['mean']],
+                ['中位数', s['median']],
+                ['标准差', s['std']],
+                ['方差', s['var']],
+                ['最小值', s['min']],
+                ['最大值', s['max']],
+                ['偏度', s['skew']],
+                ['峰度', s['kurtosis']],
+            ]
             return {
-                "table": [
-                    ['样本量', s['n']],
-                    ['均值', s['mean']],
-                    ['中位数', s['median']],
-                    ['标准差', s['std']],
-                    ['方差', s['var']],
-                    ['最小值', s['min']],
-                    ['最大值', s['max']],
-                    ['偏度', s['skew']],
-                    ['峰度', s['kurtosis']],
-                ],
-                "table_header": ['统计指标', column],
+                "tables": [{"header": ['统计指标', column], "rows": desc_table}],
                 "metrics": {"样本量": s['n'], "均值": s['mean'], "中位数": s['median'], "标准差": s['std']},
             }
 
@@ -80,8 +74,7 @@ def descriptive(options):
 
         print(f'[描述性统计] 完成: {len(results)} 个数值变量')
         return {
-            "table": table,
-            "table_header": table_header,
+            "tables": [{"header": table_header, "rows": table}],
             "metrics": {"样本量": len(df), "均值": len(numeric_cols), "中位数": "", "标准差": ""},
         }
     except Exception as e:
@@ -104,9 +97,12 @@ def _calc_stats(data):
 
 def normality(options):
     options = _ensure_dict(options)
+    data_path = options.get('data_path')
+    if not data_path:
+        return {"error": "请先在左侧上传数据文件"}
     print(f'[正态性检验] 参数: column={options.get("column", "全部")}, alpha={options.get("alpha", 0.05)}')
     try:
-        df = _read_data()
+        df = _read_data(data_path)
         column = options.get('column') or None
         alpha = float(options.get('alpha', 0.05))
 
@@ -124,11 +120,10 @@ def normality(options):
                         "statistic": round(stat, 4), "p_value": round(p, 4),
                         "is_normal": "是" if p >= alpha else "否",
                     })
-            table = [[r['name'], r['n'], r['statistic'], r['p_value'], r['is_normal']] for r in results]
+            norm_table = [[r['name'], r['n'], r['statistic'], r['p_value'], r['is_normal']] for r in results]
             print(f'[正态性检验] 完成: {len(results)} 个变量')
             return {
-                "table": table,
-                "table_header": ['变量名', '样本量', 'W统计量', 'p值', '正态分布'],
+                "tables": [{"header": ['变量名', '样本量', 'W统计量', 'p值', '正态分布'], "rows": norm_table}],
                 "metrics": {"W统计量": len(results), "p值": alpha, "正态性": f"{len(results)}个变量", "显著性水平": alpha},
             }
 
@@ -143,12 +138,12 @@ def normality(options):
         is_normal = p >= alpha
         svg = _generate_qq_plot(data, column)
         print(f'[正态性检验] {column}: W={stat:.4f}, p={p:.4f}, {"服从" if is_normal else "不服从"}正态分布')
+        norm_table = [
+            ['Shapiro-Wilk检验', round(stat, 4), round(p, 4),
+             f"{'服从正态分布' if is_normal else '不服从正态分布'} (α={alpha})"],
+        ]
         return {
-            "table": [
-                ['Shapiro-Wilk检验', round(stat, 4), round(p, 4),
-                 f"{'服从正态分布' if is_normal else '不服从正态分布'} (α={alpha})"],
-            ],
-            "table_header": ['检验项目', '统计量', 'p值', '结论'],
+            "tables": [{"header": ['检验项目', '统计量', 'p值', '结论'], "rows": norm_table}],
             "svg": svg,
             "metrics": {"W统计量": round(stat, 4), "p值": round(p, 4), "正态性": "服从" if is_normal else "不服从", "显著性水平": alpha},
         }
@@ -175,9 +170,12 @@ def _generate_qq_plot(data, name):
 
 def anova(options):
     options = _ensure_dict(options)
+    data_path = options.get('data_path')
+    if not data_path:
+        return {"error": "请先在左侧上传数据文件"}
     print(f'[方差分析] 参数: dependent_var={options.get("dependent_var")}, group_var={options.get("group_var")}')
     try:
-        df = _read_data()
+        df = _read_data(data_path)
         dependent = options.get('dependent_var') or None
         group = options.get('group_var') or None
 
@@ -226,10 +224,10 @@ def anova(options):
         is_sig = p_value < 0.05
         print(f'[方差分析] {dependent} ~ {group}: F({df_between},{df_within})={f_stat:.4f}, p={p_value:.4f}, {"显著" if is_sig else "不显著"}')
         return {
-            "table": table,
-            "table_header": ['组别', '样本量', '均值', '标准差'],
-            "anova_table": anova_table,
-            "anova_table_header": anova_header,
+            "tables": [
+                {"header": ['组别', '样本量', '均值', '标准差'], "rows": table},
+                {"header": anova_header, "rows": anova_table},
+            ],
             "svg": svg,
             "metrics": {"F值": round(f_stat, 4), "p值": round(p_value, 4), "显著性": "显著" if is_sig else "不显著", "组数": len(groups)},
         }

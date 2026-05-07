@@ -39,28 +39,26 @@ function handleUpload(file) {
       const wb = window.XLSX.read(reader.result, { type: 'array' })
       showSheetSelector(file.name, wb)
     } else {
-      const vfsPath = `/home/pyodide/data.${ext}`
+      const baseName = file.name.replace(/\.[^.]+$/, '')
+      const rawPath = `/home/pyodide/${baseName}.csv`
       const bytes = new Uint8Array(reader.result)
-      pyodide.FS.writeFile(vfsPath, bytes)
-      const meta = {
-        original_name: file.name,
-        ext,
-        sheets: [{ index: 1, name: 'sheet1', path: vfsPath }]
+      pyodide.FS.writeFile(rawPath, bytes)
+
+      const cleanedPath = `/home/pyodide/${baseName}.cleaned.csv`
+      try {
+        const dc = pyodide.globals.get('DataClean')
+        if (dc && dc.auto_clean) {
+          dc.auto_clean(rawPath, cleanedPath)
+          window._currentDataPath = cleanedPath
+        } else {
+          window._currentDataPath = rawPath
+        }
+      } catch (e) {
+        console.warn('Auto-clean failed, using raw data:', e)
+        window._currentDataPath = rawPath
       }
-      pyodide.FS.writeFile('/home/pyodide/upload_meta.json', JSON.stringify(meta))
-      pyodide.FS.writeFile('/home/pyodide/upload_name.txt', file.name)
-      window.latestUploadPayload = {
-        kind: 'file',
-        originalName: file.name,
-        ext,
-        path: vfsPath,
-        bytes: reader.result,
-      }
-      if (typeof window.ensureClusteringWorker === 'function') {
-        window.ensureClusteringWorker()
-          .then(() => window.callClusteringWorker?.('upload', window.latestUploadPayload))
-          .catch(err => console.error('Failed to upload dataset to clustering worker:', err))
-      }
+      window._currentRawDataPath = rawPath
+
       showUploadSuccess(file.name, file.size)
     }
   }
@@ -93,46 +91,47 @@ function confirmSheetSelection() {
 
   const baseName = originalName.replace(/\.[^.]+$/, '')
   const csvFileName = `${baseName}.${sheetName}.csv`
-  const path = `/home/pyodide/${csvFileName}`
+  const rawPath = `/home/pyodide/${csvFileName}`
 
-  pyodide.FS.writeFile(path, csv)
+  pyodide.FS.writeFile(rawPath, csv)
 
-  const meta = {
-    original_name: originalName,
-    ext: 'xlsx',
-    sheets: [{ index: 1, name: sheetName, path }]
+  const cleanedFileName = `${baseName}.${sheetName}.cleaned.csv`
+  const cleanedPath = `/home/pyodide/${cleanedFileName}`
+
+  try {
+    const dc = pyodide.globals.get('DataClean')
+    if (dc && dc.auto_clean) {
+      dc.auto_clean(rawPath, cleanedPath)
+      window._currentDataPath = cleanedPath
+    } else {
+      window._currentDataPath = rawPath
+    }
+  } catch (e) {
+    console.warn('Auto-clean failed, using raw data:', e)
+    window._currentDataPath = rawPath
   }
-  pyodide.FS.writeFile('/home/pyodide/upload_meta.json', JSON.stringify(meta))
-  pyodide.FS.writeFile('/home/pyodide/upload_name.txt', originalName)
-
-  window.latestUploadPayload = {
-    kind: 'excel',
-    originalName,
-    ext: 'xlsx',
-    sheets: [{ index: 1, name: sheetName, path, csv }]
-  }
+  window._currentRawDataPath = rawPath
 
   document.getElementById('sheetSelector').style.display = 'none'
   delete window._pendingExcel
 
-  if (typeof window.ensureClusteringWorker === 'function') {
-    window.ensureClusteringWorker()
-      .then(() => window.callClusteringWorker?.('upload', window.latestUploadPayload))
-      .catch(err => console.error('Failed to upload dataset to clustering worker:', err))
-  }
   showUploadSuccess(originalName, 0)
 }
 
 function showUploadSuccess(name, size) {
+  const cleaned = window._currentDataPath && window._currentDataPath !== window._currentRawDataPath
   document.getElementById('dropZone').innerHTML = `
     <div class="dataset-card">
       <button class="cancel-btn" onclick="resetUpload()"><i class="fas fa-times"></i></button>
       <div class="dataset-title"><i class="fas fa-database"></i> 当前数据集</div>
       <div class="dataset-detail">
         <span><i class="fas fa-file-csv"></i> ${name}</span>
-        <span><i class="fas fa-hashtag"></i> ${(size / 1024).toFixed(1)} KB</span>
+        ${size ? `<span><i class="fas fa-hashtag"></i> ${(size / 1024).toFixed(1)} KB</span>` : ''}
       </div>
-      <div style="margin-top:12px"><span class="badge-success"><i class="far fa-check-circle"></i> 已写入 Pyodide 虚拟 FS</span></div>
+      <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+        <span class="badge-success"><i class="far fa-check-circle"></i> 已写入 VFS</span>
+        ${cleaned ? '<span class="badge-success" style="background:#e3f0fa;color:#1e4b6e;"><i class="fas fa-broom"></i> 已自动清洗</span>' : ''}
+      </div>
     </div>`
 }
 
@@ -152,16 +151,13 @@ function resetUpload() {
   const sheetSel = document.getElementById('sheetSelector')
   if (sheetSel) sheetSel.style.display = 'none'
   delete window._pendingExcel
+  delete window._currentDataPath
+  delete window._currentRawDataPath
   initUpload()
 }
 
 // --- stdout capture ---
 function captureStdout(moduleName, funcName, params = {}) {
-  if (moduleName === 'Clustering' && typeof window.ensureClusteringWorker === 'function') {
-    return window.ensureClusteringWorker().then(() =>
-      window.callClusteringWorker('run', { moduleName, funcName, params })
-    )
-  }
   return new Promise((resolve, reject) => {
     const lines = []
     pyodide.setStdout({ batched: s => lines.push(s) })
@@ -222,45 +218,20 @@ function renderModuleResult(container, out) {
     metrics.forEach((el, i) => { if (i < vals.length) el.textContent = vals[i] })
   }
 
-  const tbody = container.querySelector('.simple-table tbody')
-  if (tbody && out.result.table) {
-    tbody.innerHTML = out.result.table.map(
-      row => `<tr>${row.map(c => `<td>${c}</td>`).join('')}</tr>`
-    ).join('')
-  }
-
-  const headerRow = container.querySelector('.simple-table thead tr')
-  if (headerRow && out.result.table_header) {
-    headerRow.innerHTML = out.result.table_header.map(h => `<th>${h}</th>`).join('')
-  }
-
-  const scoresTbody = container.querySelector('.scores-table tbody')
-  if (scoresTbody && out.result.scores_table) {
-    scoresTbody.innerHTML = out.result.scores_table.map(
-      row => `<tr>${row.map(c => `<td>${c}</td>`).join('')}</tr>`
-    ).join('')
-  }
-
-  const scoresHeader = container.querySelector('.scores-table thead tr')
-  if (scoresHeader && out.result.scores_header) {
-    scoresHeader.innerHTML = out.result.scores_header.map(h => `<th>${h}</th>`).join('')
-  }
-
-  const anovaTbody = container.querySelector('.anova-table tbody')
-  if (anovaTbody && out.result.anova_table) {
-    anovaTbody.innerHTML = out.result.anova_table.map(
-      row => `<tr>${row.map(c => `<td>${c}</td>`).join('')}</tr>`
-    ).join('')
-  }
-
-  const anovaHeader = container.querySelector('.anova-table thead tr')
-  if (anovaHeader && out.result.anova_table_header) {
-    anovaHeader.innerHTML = out.result.anova_table_header.map(h => `<th>${h}</th>`).join('')
-  }
-
-  if (outputPre && out.result.summary_table && out.result.summary_table.length) {
-    const lines = out.result.summary_table.map(r => r.join(' | '))
-    outputPre.textContent = `各 sheet 指标:\n${lines.join('\n')}`
+  const tables = container.querySelectorAll('.simple-table')
+  if (tables.length && out.result.tables) {
+    tables.forEach((tbl, i) => {
+      const data = out.result.tables[i]
+      if (!data) return
+      const thead = tbl.querySelector('thead tr')
+      const tbody = tbl.querySelector('tbody')
+      if (thead && data.header) {
+        thead.innerHTML = data.header.map(h => `<th>${h}</th>`).join('')
+      }
+      if (tbody && data.rows) {
+        tbody.innerHTML = data.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')
+      }
+    })
   }
 }
 
@@ -275,6 +246,8 @@ function collectParams(container) {
       params[key] = el.value
     }
   })
+  if (window._currentDataPath) params.data_path = window._currentDataPath
+  if (window._currentRawDataPath) params.raw_data_path = window._currentRawDataPath
   return params
 }
 
@@ -286,7 +259,7 @@ function exportClusteringReport(container) {
     const value = item.querySelector('.metric-value')?.textContent?.trim() || '--'
     return `<tr><td>${label}</td><td>${value}</td></tr>`
   }).join('')
-  const tableHtml = container.querySelector('.simple-table')?.outerHTML || '<p>No table.</p>'
+  const tableHtml = Array.from(container.querySelectorAll('.simple-table')).map(t => t.outerHTML).join('\n') || '<p>No table.</p>'
   const chartHtml = container.querySelector('.chart-container')?.innerHTML || '<p>No chart.</p>'
   const logText = container.querySelector('.py-output')?.textContent || ''
   const now = new Date()
@@ -429,12 +402,6 @@ function bindRunButtons() {
         btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> 中断中...'
         btn.disabled = true
         if (outputPre) outputPre.textContent = '已请求中断，本次结果将被忽略。'
-        if (mod === 'Clustering' && typeof window.interruptClusteringWorker === 'function') {
-          window.interruptClusteringWorker()
-          if (typeof window.ensureClusteringWorker === 'function') {
-            window.ensureClusteringWorker().catch(err => console.error('Failed to restart clustering worker:', err))
-          }
-        }
         return
       }
 
