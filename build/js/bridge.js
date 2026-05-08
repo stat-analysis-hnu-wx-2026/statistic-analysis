@@ -4,24 +4,22 @@ function initUpload() {
   const fileInput = document.getElementById('fileInput')
   if (!dropZone || !fileInput) return
 
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over') })
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'))
-
-  dropZone.addEventListener('drop', e => {
+  dropZone.ondragover = e => { e.preventDefault(); dropZone.classList.add('drag-over') }
+  dropZone.ondragleave = () => dropZone.classList.remove('drag-over')
+  dropZone.ondrop = e => {
     e.preventDefault()
     dropZone.classList.remove('drag-over')
     const files = e.dataTransfer?.files
     if (files?.length) handleUpload(files[0])
-  })
-
-  dropZone.addEventListener('click', e => {
-    if (e.target.tagName !== 'INPUT') fileInput.click()
-  })
-
-  fileInput.addEventListener('change', e => {
+  }
+  dropZone.onclick = e => {
+    if (e.target.closest('.browse-btn') || e.target.tagName === 'INPUT') return
+    fileInput.click()
+  }
+  fileInput.onchange = e => {
     const files = e.target?.files
     if (files?.length) handleUpload(files[0])
-  })
+  }
 }
 
 function handleUpload(file) {
