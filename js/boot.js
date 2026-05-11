@@ -24,15 +24,22 @@ async function initPyodide() {
   try {
     setPyStatus('<i class="fas fa-spinner fa-pulse"></i> 连接 CDN...', 2)
 
+    if (typeof loadPyodide !== 'function') {
+      throw new Error('Pyodide 脚本未加载，请检查网络/CDN 连通性。')
+    }
+
     pyodide = await loadPyodide()
 
     setPyStatus('<i class="fas fa-spinner fa-pulse"></i> 下载 Python 包...', 35)
 
-    await pyodide.loadPackage(['numpy', 'matplotlib'], {
+    await pyodide.loadPackage(['numpy', 'matplotlib', 'pandas', 'scipy', 'scikit-learn'], {
       messageCallback: (msg) => {
         const lower = msg.toLowerCase()
         if (lower.includes('numpy')) setPyStatus('<i class="fas fa-spinner fa-pulse"></i> 下载 numpy...', 48)
         else if (lower.includes('matplotlib')) setPyStatus('<i class="fas fa-spinner fa-pulse"></i> 下载 matplotlib...', 60)
+        else if (lower.includes('pandas')) setPyStatus('<i class="fas fa-spinner fa-pulse"></i> 下载 pandas...', 66)
+        else if (lower.includes('scipy')) setPyStatus('<i class="fas fa-spinner fa-pulse"></i> 下载 scipy...', 70)
+        else if (lower.includes('scikit-learn')) setPyStatus('<i class="fas fa-spinner fa-pulse"></i> 下载 scikit-learn...', 74)
         const m = msg.match(/(\d+)\s*\/\s*(\d+)/)
         if (m) {
           const pct = 35 + Math.round((parseInt(m[1]) / parseInt(m[2])) * 30)
