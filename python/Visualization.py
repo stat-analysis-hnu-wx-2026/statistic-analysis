@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import io
 
 def generate_visualization(options):
-    # 【规范遵循】1. 兼容 Pyodide 的 JsProxy 转换
+    # 1. 兼容 Pyodide 的 JsProxy 转换
     if not isinstance(options, dict):
         to_py = getattr(options, "to_py", None)
         if callable(to_py):
@@ -11,7 +11,7 @@ def generate_visualization(options):
         else:
             options = dict(options)
             
-    # 【规范遵循】2. 通过 options.get 读取数据路径
+    # 2. 通过 options.get 读取数据路径
     data_path = options.get('data_path')
     if not data_path:
         return {"error": "请先在左侧上传数据文件"}
@@ -38,7 +38,7 @@ def generate_visualization(options):
                 f"{std_val:.4f}" if pd.notna(std_val) else "-"
             ])
         
-        # 【规范遵循】3. 纯 Matplotlib 生成 SVG 字符串
+        # 3. 纯 Matplotlib 生成 SVG 字符串
         fig, ax = plt.subplots(figsize=(10, 5))
         
         if chart_type == '散点图' and x_var in df.columns and y_var in df.columns:
@@ -77,7 +77,7 @@ def generate_visualization(options):
         plt.close(fig) # 释放 WASM 内存
         svg_str = buf.getvalue().decode('utf-8')
         
-        # 【规范遵循】4. 返回对应格式的字典
+        # 4. 返回对应格式的字典
         return {
             "svgs": [svg_str],
             "metrics": {
