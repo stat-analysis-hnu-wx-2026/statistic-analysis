@@ -704,91 +704,80 @@ window.MODULE_HTML = {
 </div>
 `,
   "visualization": `<div class="module-content" id="visualization">
-  <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+  <div class="page-header">
     <div class="header-left">
       <h1>数据可视化</h1>
       <div class="breadcrumb"><i class="fas fa-folder-open"></i> 探索 / 可视化</div>
     </div>
-    <div class="header-right" style="display: flex; gap: 10px;">
-      <button class="btn" style="background: #fff; border: 1px solid #ddd; padding: 8px 16px; border-radius: 4px;"><i class="fas fa-download"></i> 导出图片</button>
-      <button class="btn" style="background: #2b5c8f; color: #fff; border: none; padding: 8px 16px; border-radius: 4px;" id="run-vis-btn"><i class="fas fa-play"></i> 生成图表</button>
+    <div class="header-actions">
+      <button class="btn-default" style="margin-right: 10px;">
+        <i class="fas fa-download"></i> 导出图片
+      </button>
+      <button class="btn-primary btn-run" data-module="Visualization" data-func="generate_visualization">
+        <i class="fas fa-play"></i> 生成图表
+      </button>
     </div>
   </div>
 
-  <div class="card" style="background: #fff; border-radius: 8px; margin-bottom: 20px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-    <div class="card-header" style="margin-bottom: 15px; font-weight: bold; color: #333;">
-      <i class="fas fa-sliders-h"></i> 可视化参数配置
-    </div>
-    <div class="card-body" style="display: flex; gap: 20px;">
-      <div class="form-group">
-        <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">图表类型</label>
-        <select class="form-control" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px; width: 150px;">
-          <option>散点图</option>
-          <option>折线图</option>
-          <option>热力图</option>
-          <option>箱线图</option>
+  <div class="param-card">
+    <div class="param-title"><i class="fas fa-sliders-h"></i> 可视化参数配置</div>
+    <div class="param-grid">
+      <div class="param-field">
+        <label>图表类型</label>
+        <select class="fake-select-control" data-param="chart_type">
+          <option value="散点图" selected>散点图</option>
+          <option value="折线图">折线图</option>
+          <option value="热力图">热力图</option>
+          <option value="箱线图">箱线图</option>
         </select>
       </div>
-      <div class="form-group">
-        <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">X轴变量</label>
-        <select class="form-control" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px; width: 150px;">
-          <option>变量 1</option>
-        </select>
+      <div class="param-field">
+        <label>X轴变量 (填写表头列名)</label>
+        <input type="text" class="form-control" data-param="x_var" placeholder="如: 变量1">
       </div>
-      <div class="form-group">
-        <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">Y轴变量</label>
-        <select class="form-control" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px; width: 150px;">
-          <option>变量 2</option>
-        </select>
+      <div class="param-field">
+        <label>Y轴变量 (填写表头列名)</label>
+        <input type="text" class="form-control" data-param="y_var" placeholder="如: 变量2">
       </div>
     </div>
   </div>
 
-  <div class="card" style="background: #fff; border-radius: 8px; margin-bottom: 20px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-    <div class="card-header" style="margin-bottom: 15px; font-weight: bold; color: #333;">
-      <i class="fas fa-chart-area"></i> 可视化图表
+  <div class="metrics-row">
+    <div class="metric-item">
+      <div class="metric-label">数据量</div>
+      <div class="metric-value">--</div>
     </div>
-    <div class="card-body">
-      <div class="chart-container" style="min-height: 300px; border: 1px dashed #ddd; display: flex; align-items: center; justify-content: center; color: #999;">
-      </div>
+    <div class="metric-item">
+      <div class="metric-label">维度</div>
+      <div class="metric-value">--</div>
     </div>
-  </div>
-
-  <div class="metrics-row" style="display: flex; gap: 20px; margin-bottom: 20px;">
-    <div class="card metric-card" style="flex: 1; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-      <div style="font-size: 12px; color: #666; margin-bottom: 10px;">数据量</div>
-      <div class="metric-value" style="font-size: 24px; font-weight: bold;">--</div>
-    </div>
-    <div class="card metric-card" style="flex: 1; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-      <div style="font-size: 12px; color: #666; margin-bottom: 10px;">维度</div>
-      <div class="metric-value" style="font-size: 24px; font-weight: bold;">--</div>
-    </div>
-    <div class="card metric-card" style="flex: 1; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-      <div style="font-size: 12px; color: #666; margin-bottom: 10px;">缺失值</div>
-      <div class="metric-value" style="font-size: 24px; font-weight: bold;">--</div>
+    <div class="metric-item">
+      <div class="metric-label">缺失值</div>
+      <div class="metric-value">--</div>
     </div>
   </div>
 
-  <div class="card" style="background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-    <div class="card-header" style="margin-bottom: 15px; font-weight: bold; color: #333; display: flex; justify-content: space-between;">
+  <div class="chart-card">
+    <div class="chart-header">
+      <h3><i class="fas fa-chart-bar"></i> 结果图</h3>
+    </div>
+    <div class="chart-container" style="min-height:300px; display:flex; align-items:center; justify-content:center; color:#a0aec0; border:1px dashed #e2e8f0;">
+      等待运行分析...
+    </div>
+    <pre class="py-output" style="margin-top:10px; padding:10px; background:#f6f9fc; border:1px solid #e2eaf2; border-radius:4px; color:#3e5468; font-size:12px; white-space:pre-wrap;"></pre>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
       <span><i class="fas fa-table"></i> 描述性统计表</span>
     </div>
-    <div class="card-body">
-      <table class="simple-table" style="width: 100%; border-collapse: collapse; text-align: left;">
-        <thead>
-          <tr style="border-bottom: 1px solid #eee;">
-            <th style="padding: 10px;">特征</th>
-            <th style="padding: 10px;">均值</th>
-            <th style="padding: 10px;">标准差</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td colspan="3" style="padding: 20px; text-align: center; color: #999;">暂无数据</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <table class="simple-table">
+      <thead>
+        <tr><th>特征</th><th>均值</th><th>标准差</th></tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
   </div>
 </div>`,
   "python": `<div class="module-content" id="python">
@@ -1946,7 +1935,103 @@ window.MODULE_HTML = {
         <i class="fas fa-file-code"></i> Visualization.py
         <span class="badge">Visualization</span>
       </div>
-      <pre class="python-code"><code><span style="color: #959077"># 此处存放 可视化 代码</span>
+      <pre class="python-code"><code><span style="color: #FF4689">import</span><span style="color: #F8F8F2"> pandas </span><span style="color: #66D9EF">as</span><span style="color: #F8F8F2"> pd</span>
+<span style="color: #FF4689">import</span><span style="color: #F8F8F2"> matplotlib.pyplot </span><span style="color: #66D9EF">as</span><span style="color: #F8F8F2"> plt</span>
+<span style="color: #FF4689">import</span><span style="color: #F8F8F2"> io</span>
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">generate_visualization</span><span style="color: #F8F8F2">(options):</span>
+    <span style="color: #959077"># 1. 兼容 Pyodide 的 JsProxy 转换</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">isinstance(options,</span> <span style="color: #F8F8F2">dict):</span>
+        <span style="color: #F8F8F2">to_py</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">getattr(options,</span> <span style="color: #E6DB74">&quot;to_py&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">callable(to_py):</span>
+            <span style="color: #F8F8F2">options</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">to_py()</span>
+        <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #F8F8F2">options</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">dict(options)</span>
+            
+    <span style="color: #959077"># 2. 通过 options.get 读取数据路径</span>
+    <span style="color: #F8F8F2">data_path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;data_path&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">data_path:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;请先在左侧上传数据文件&quot;</span><span style="color: #F8F8F2">}</span>
+    
+    <span style="color: #F8F8F2">chart_type</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;chart_type&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;散点图&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">x_var</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;x_var&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">y_var</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;y_var&#39;</span><span style="color: #F8F8F2">)</span>
+    
+    <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(data_path)</span>
+        
+        <span style="color: #F8F8F2">data_volume</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">len(df)</span>
+        <span style="color: #F8F8F2">dimensions</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">shape[</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]</span>
+        <span style="color: #F8F8F2">missing_values</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">int(df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">isna()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum())</span>
+        
+        <span style="color: #F8F8F2">numeric_df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">select_dtypes(include</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;number&#39;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">desc_table</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+        <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">col</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">numeric_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns:</span>
+            <span style="color: #F8F8F2">mean_val</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">numeric_df[col]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">mean()</span>
+            <span style="color: #F8F8F2">std_val</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">numeric_df[col]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">std()</span>
+            <span style="color: #F8F8F2">desc_table</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append([</span>
+                <span style="color: #F8F8F2">str(col),</span> 
+                <span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">mean_val</span><span style="color: #E6DB74">:.4f}&quot;</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">notna(mean_val)</span> <span style="color: #66D9EF">else</span> <span style="color: #E6DB74">&quot;-&quot;</span><span style="color: #F8F8F2">,</span> 
+                <span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">std_val</span><span style="color: #E6DB74">:.4f}&quot;</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">notna(std_val)</span> <span style="color: #66D9EF">else</span> <span style="color: #E6DB74">&quot;-&quot;</span>
+            <span style="color: #F8F8F2">])</span>
+        
+        <span style="color: #959077"># 3. 纯 Matplotlib 生成 SVG 字符串</span>
+        <span style="color: #F8F8F2">fig,</span> <span style="color: #F8F8F2">ax</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">subplots(figsize</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">(</span><span style="color: #AE81FF">10</span><span style="color: #F8F8F2">,</span> <span style="color: #AE81FF">5</span><span style="color: #F8F8F2">))</span>
+        
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">chart_type</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;散点图&#39;</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">x_var</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">y_var</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns:</span>
+            <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">scatter(df[x_var],</span> <span style="color: #F8F8F2">df[y_var],</span> <span style="color: #F8F8F2">alpha</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0.7</span><span style="color: #F8F8F2">)</span>
+            <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xlabel(x_var)</span>
+            <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_ylabel(y_var)</span>
+        <span style="color: #66D9EF">elif</span> <span style="color: #F8F8F2">chart_type</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;折线图&#39;</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">x_var</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">y_var</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns:</span>
+            <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">plot(df[x_var],</span> <span style="color: #F8F8F2">df[y_var],</span> <span style="color: #F8F8F2">marker</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;o&#39;</span><span style="color: #F8F8F2">)</span>
+            <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xlabel(x_var)</span>
+            <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_ylabel(y_var)</span>
+        <span style="color: #66D9EF">elif</span> <span style="color: #F8F8F2">chart_type</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;箱线图&#39;</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">y_var</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns:</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">x_var</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">x_var</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns:</span>
+                <span style="color: #F8F8F2">groups</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">groupby(x_var)[y_var]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">apply(list)</span>
+                <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">boxplot(groups</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">values,</span> <span style="color: #F8F8F2">labels</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">groups</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">keys())</span>
+                <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xlabel(x_var)</span>
+            <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">boxplot(df[y_var]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">dropna())</span>
+            <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_ylabel(y_var)</span>
+        <span style="color: #66D9EF">elif</span> <span style="color: #F8F8F2">chart_type</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;热力图&#39;</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #F8F8F2">corr</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">numeric_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">corr()</span>
+            <span style="color: #F8F8F2">cax</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">matshow(corr,</span> <span style="color: #F8F8F2">cmap</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;Blues&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">aspect</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;auto&#39;</span><span style="color: #F8F8F2">)</span>
+            <span style="color: #F8F8F2">fig</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">colorbar(cax)</span>
+            <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xticks(range(len(corr</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns)))</span>
+            <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_yticks(range(len(corr</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns)))</span>
+            <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xticklabels(corr</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns,</span> <span style="color: #F8F8F2">rotation</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">45</span><span style="color: #F8F8F2">)</span>
+            <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_yticklabels(corr</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns)</span>
+        <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">text(</span><span style="color: #AE81FF">0.5</span><span style="color: #F8F8F2">,</span> <span style="color: #AE81FF">0.5</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;图表参数不足或列名不存在</span><span style="color: #AE81FF">\\n</span><span style="color: #E6DB74">请检查 X轴/Y轴 变量是否填写正确&#39;</span><span style="color: #F8F8F2">,</span> 
+                    <span style="color: #F8F8F2">ha</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;center&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">va</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;center&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">12</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">color</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;gray&#39;</span><span style="color: #F8F8F2">)</span>
+
+        <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_title(chart_type)</span>
+        <span style="color: #F8F8F2">fig</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">tight_layout()</span>
+        
+        <span style="color: #F8F8F2">buf</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">io</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">BytesIO()</span>
+        <span style="color: #F8F8F2">fig</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">savefig(buf,</span> <span style="color: #F8F8F2">format</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;svg&#39;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">close(fig)</span> <span style="color: #959077"># 释放 WASM 内存</span>
+        <span style="color: #F8F8F2">svg_str</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">buf</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">getvalue()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">decode(</span><span style="color: #E6DB74">&#39;utf-8&#39;</span><span style="color: #F8F8F2">)</span>
+        
+        <span style="color: #959077"># 4. 返回对应格式的字典</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
+            <span style="color: #E6DB74">&quot;svgs&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[svg_str],</span>
+            <span style="color: #E6DB74">&quot;metrics&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">{</span>
+                <span style="color: #E6DB74">&quot;数据量&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">data_volume,</span>
+                <span style="color: #E6DB74">&quot;维度&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">dimensions,</span>
+                <span style="color: #E6DB74">&quot;缺失值&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">missing_values</span>
+            <span style="color: #F8F8F2">},</span>
+            <span style="color: #E6DB74">&quot;tables&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span>
+                <span style="color: #F8F8F2">{</span>
+                    <span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&quot;特征&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;均值&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;标准差&quot;</span><span style="color: #F8F8F2">],</span>
+                    <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">desc_table</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">desc_table</span> <span style="color: #66D9EF">else</span> <span style="color: #F8F8F2">[[</span><span style="color: #E6DB74">&quot;-&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;-&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;-&quot;</span><span style="color: #F8F8F2">]]</span>
+                <span style="color: #F8F8F2">}</span>
+            <span style="color: #F8F8F2">]</span>
+        <span style="color: #F8F8F2">}</span>
+        
+    <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">e:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">str(e)}</span>
 </code></pre>
     </div>
     <div class="python-file-card">
@@ -3119,8 +3204,103 @@ def pca(options):
   </script>
 
   <script type="text/python-src" data-module="Visualization">
-# 此处存放 可视化 代码
+import pandas as pd
+import matplotlib.pyplot as plt
+import io
 
+def generate_visualization(options):
+    # 1. 兼容 Pyodide 的 JsProxy 转换
+    if not isinstance(options, dict):
+        to_py = getattr(options, "to_py", None)
+        if callable(to_py):
+            options = to_py()
+        else:
+            options = dict(options)
+            
+    # 2. 通过 options.get 读取数据路径
+    data_path = options.get('data_path')
+    if not data_path:
+        return {"error": "请先在左侧上传数据文件"}
+    
+    chart_type = options.get('chart_type', '散点图')
+    x_var = options.get('x_var')
+    y_var = options.get('y_var')
+    
+    try:
+        df = pd.read_csv(data_path)
+        
+        data_volume = len(df)
+        dimensions = df.shape[1]
+        missing_values = int(df.isna().sum().sum())
+        
+        numeric_df = df.select_dtypes(include='number')
+        desc_table = []
+        for col in numeric_df.columns:
+            mean_val = numeric_df[col].mean()
+            std_val = numeric_df[col].std()
+            desc_table.append([
+                str(col), 
+                f"{mean_val:.4f}" if pd.notna(mean_val) else "-", 
+                f"{std_val:.4f}" if pd.notna(std_val) else "-"
+            ])
+        
+        # 3. 纯 Matplotlib 生成 SVG 字符串
+        fig, ax = plt.subplots(figsize=(10, 5))
+        
+        if chart_type == '散点图' and x_var in df.columns and y_var in df.columns:
+            ax.scatter(df[x_var], df[y_var], alpha=0.7)
+            ax.set_xlabel(x_var)
+            ax.set_ylabel(y_var)
+        elif chart_type == '折线图' and x_var in df.columns and y_var in df.columns:
+            ax.plot(df[x_var], df[y_var], marker='o')
+            ax.set_xlabel(x_var)
+            ax.set_ylabel(y_var)
+        elif chart_type == '箱线图' and y_var in df.columns:
+            if x_var and x_var in df.columns:
+                groups = df.groupby(x_var)[y_var].apply(list)
+                ax.boxplot(groups.values, labels=groups.keys())
+                ax.set_xlabel(x_var)
+            else:
+                ax.boxplot(df[y_var].dropna())
+            ax.set_ylabel(y_var)
+        elif chart_type == '热力图':
+            corr = numeric_df.corr()
+            cax = ax.matshow(corr, cmap='Blues', aspect='auto')
+            fig.colorbar(cax)
+            ax.set_xticks(range(len(corr.columns)))
+            ax.set_yticks(range(len(corr.columns)))
+            ax.set_xticklabels(corr.columns, rotation=45)
+            ax.set_yticklabels(corr.columns)
+        else:
+            ax.text(0.5, 0.5, '图表参数不足或列名不存在\n请检查 X轴/Y轴 变量是否填写正确', 
+                    ha='center', va='center', fontsize=12, color='gray')
+
+        ax.set_title(chart_type)
+        fig.tight_layout()
+        
+        buf = io.BytesIO()
+        fig.savefig(buf, format='svg')
+        plt.close(fig) # 释放 WASM 内存
+        svg_str = buf.getvalue().decode('utf-8')
+        
+        # 4. 返回对应格式的字典
+        return {
+            "svgs": [svg_str],
+            "metrics": {
+                "数据量": data_volume,
+                "维度": dimensions,
+                "缺失值": missing_values
+            },
+            "tables": [
+                {
+                    "header": ["特征", "均值", "标准差"],
+                    "rows": desc_table if desc_table else [["-", "-", "-"]]
+                }
+            ]
+        }
+        
+    except Exception as e:
+        return {"error": str(e)}
   </script>
 
   <script type="text/python-src" data-module="test">
