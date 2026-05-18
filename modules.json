@@ -2,7 +2,7 @@
   "nav": [
     {"type": "button", "module": "clustering", "icon": "fas fa-layer-group", "label": "聚类分析", "active": true},
     {"type": "button", "module": "visualization", "icon": "fas fa-flask", "label": "可视化"},
-    {"type": "button", "module": "statistics", "icon": "fas fa-chart-bar", "label": "统计评价"},
+    {"type": "button", "module": "Evaluation", "icon": "fas fa-chart-bar", "label": "统计评价"},
     {"type": "button", "module": "pca", "icon": "fas fa-arrow-down-wide-short", "label": "主成分分析"},
     {"type": "button", "module": "factor", "icon": "fas fa-cube", "label": "因子分析"},
     {"type": "button", "module": "correspondence", "icon": "fas fa-arrows-left-right", "label": "对应分析"},

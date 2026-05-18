@@ -1,257 +1,300 @@
 import pandas as pd
 import numpy as np
-from scipy import stats
 import matplotlib.pyplot as plt
-from io import BytesIO
+import io
+import json
 
-
-def _read_data(data_path):
-    print(f'[Evaluation] 读取: {data_path}')
-    df = pd.read_csv(data_path)
-    print(f'[Evaluation] 数据形状: {df.shape}')
-    return df
-
-
-def _ensure_dict(obj):
-    if obj is not None and not isinstance(obj, dict):
-        obj = obj.to_py()
-    return obj or {}
-
-
-def descriptive(options):
-    options = _ensure_dict(options)
+def analyze(options):
+    """综合分析主函数 - 支持层次分析法和综合分析法"""
+    if not isinstance(options, dict):
+        options = options.to_py()
+    
     data_path = options.get('data_path')
+    method_type = options.get('method_type', 'ahp')  # 'ahp' 或 'comprehensive'
+    
     if not data_path:
         return {"error": "请先在左侧上传数据文件"}
-    print(f'[描述性统计] 参数: column={options.get("column", "全部")}')
+    
     try:
-        df = _read_data(data_path)
-        column = options.get('column') or None
-
-        if column and column in df.columns:
-            data = df[column].dropna()
-            if len(data) == 0:
-                return {"error": f"列 '{column}' 没有有效数据"}
-            s = _calc_stats(data)
-            print(f'[描述性统计] {column}: 均值={s["mean"]}, 标准差={s["std"]}, 样本量={s["n"]}')
-            desc_table = [
-                ['样本量', s['n']],
-                ['均值', s['mean']],
-                ['中位数', s['median']],
-                ['标准差', s['std']],
-                ['方差', s['var']],
-                ['最小值', s['min']],
-                ['最大值', s['max']],
-                ['偏度', s['skew']],
-                ['峰度', s['kurtosis']],
-            ]
-            return {
-                "tables": [{"header": ['统计指标', column], "rows": desc_table}],
-                "metrics": {"样本量": s['n'], "均值": s['mean'], "中位数": s['median'], "标准差": s['std']},
-            }
-
-        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-        if not numeric_cols:
-            return {"error": "数据中没有数值类型的列"}
-
-        results = []
-        for col in numeric_cols:
-            data = df[col].dropna()
-            if len(data) > 0:
-                results.append({"name": col, **_calc_stats(data)})
-
-        metric_names = ['样本量', '均值', '中位数', '标准差', '最小值', '最大值']
-        table_header = ['统计指标'] + [r['name'] for r in results]
-        table = []
-        for m in metric_names:
-            row = [m]
-            for r in results:
-                val = r.get(m, '-')
-                if isinstance(val, float):
-                    val = round(val, 4)
-                row.append(val)
-            table.append(row)
-
-        print(f'[描述性统计] 完成: {len(results)} 个数值变量')
-        return {
-            "tables": [{"header": table_header, "rows": table}],
-            "metrics": {"样本量": len(df), "均值": len(numeric_cols), "中位数": "", "标准差": ""},
-        }
+        df = pd.read_csv(data_path)
     except Exception as e:
-        return {"error": f"描述性统计失败: {e}"}
+        return {"error": f"读取数据失败: {e}"}
+    
+    if df.empty:
+        return {"error": "数据文件为空"}
+    
+    # 获取数值列
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if len(numeric_cols) < 2:
+        return {"error": "数据需要至少2个数值型指标列"}
+    
+    # 获取用户选择的指标（逗号分隔字符串 → 列表）
+    selected_indicators = options.get('indicators', None)
+    if selected_indicators and isinstance(selected_indicators, str):
+        selected_indicators = [c.strip() for c in selected_indicators.split(',') if c.strip()]
+    if selected_indicators and isinstance(selected_indicators, list) and len(selected_indicators) > 0:
+        available_cols = [col for col in selected_indicators if col in numeric_cols]
+        if len(available_cols) >= 2:
+            numeric_cols = available_cols
+    
+    if method_type == 'ahp':
+        return run_ahp(df, numeric_cols, options)
+    else:
+        return run_comprehensive(df, numeric_cols, options)
 
 
-def _calc_stats(data):
+def run_ahp(df, numeric_cols, options):
+    """层次分析法"""
+    # 获取判断矩阵
+    judgement_matrix_str = options.get('judgement_matrix', '')
+    weights = None
+    
+    if judgement_matrix_str:
+        try:
+            judgement_matrix = json.loads(judgement_matrix_str)
+            if len(judgement_matrix) == len(numeric_cols):
+                weights = calculate_ahp_weights(judgement_matrix)
+        except:
+            pass
+    
+    if weights is None:
+        weights = calculate_auto_weights(df, numeric_cols)
+    
+    # 标准化并计算得分
+    normalized = normalize_minmax(df[numeric_cols].values)
+    scores = np.dot(normalized, weights)
+    sorted_indices = np.argsort(scores)[::-1]
+    
+    # 结果表格
+    results_table = []
+    for i, idx in enumerate(sorted_indices[:20]):
+        results_table.append([
+            i + 1,
+            str(df.iloc[idx, 0]) if df.shape[1] > 0 else f"样本{idx+1}",
+            f"{scores[idx]:.4f}"
+        ])
+    
+    table_header = ["排名", "名称/ID", "综合得分"]
+    weights_table = [[col, f"{weights[i]:.4f}"] for i, col in enumerate(numeric_cols)]
+    
+    # 创建可视化
+    svgs = []
+    bar_svg = create_score_bar_chart(scores[sorted_indices[:10]], results_table[:10])
+    if bar_svg:
+        svgs.append(bar_svg)
+    
     return {
-        "n": len(data),
-        "mean": round(data.mean(), 4),
-        "median": round(data.median(), 4),
-        "std": round(data.std(), 4),
-        "var": round(data.var(), 4),
-        "min": round(data.min(), 4),
-        "max": round(data.max(), 4),
-        "skew": round(data.skew(), 4),
-        "kurtosis": round(data.kurtosis(), 4),
+        "svgs": svgs,
+        "tables": [
+            {"header": table_header, "rows": results_table},
+            {"header": ["指标名称", "权重"], "rows": weights_table}
+        ],
+        "metrics": {
+            "样本数": len(df),
+            "指标数": len(numeric_cols),
+            "方法": "AHP",
+            "最高分": f"{scores.max():.4f}",
+            "最低分": f"{scores.min():.4f}",
+            "平均分": f"{scores.mean():.4f}"
+        }
     }
 
 
-def normality(options):
-    options = _ensure_dict(options)
-    data_path = options.get('data_path')
-    if not data_path:
-        return {"error": "请先在左侧上传数据文件"}
-    print(f'[正态性检验] 参数: column={options.get("column", "全部")}, alpha={options.get("alpha", 0.05)}')
-    try:
-        df = _read_data(data_path)
-        column = options.get('column') or None
-        alpha = float(options.get('alpha', 0.05))
-
-        if not column:
-            numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-            if not numeric_cols:
-                return {"error": "数据中没有数值类型的列"}
-            results = []
-            for col in numeric_cols:
-                data = df[col].dropna()
-                if len(data) >= 3:
-                    stat, p = stats.shapiro(data)
-                    results.append({
-                        "name": col, "n": len(data),
-                        "statistic": round(stat, 4), "p_value": round(p, 4),
-                        "is_normal": "是" if p >= alpha else "否",
-                    })
-            norm_table = [[r['name'], r['n'], r['statistic'], r['p_value'], r['is_normal']] for r in results]
-            print(f'[正态性检验] 完成: {len(results)} 个变量')
-            return {
-                "tables": [{"header": ['变量名', '样本量', 'W统计量', 'p值', '正态分布'], "rows": norm_table}],
-                "metrics": {"W统计量": len(results), "p值": alpha, "正态性": f"{len(results)}个变量", "显著性水平": alpha},
-            }
-
-        if column not in df.columns:
-            return {"error": f"列 '{column}' 不存在"}
-
-        data = df[column].dropna()
-        if len(data) < 3:
-            return {"error": "样本量不足（需要至少3个）"}
-
-        stat, p = stats.shapiro(data)
-        is_normal = p >= alpha
-        svg = _generate_qq_plot(data, column)
-        print(f'[正态性检验] {column}: W={stat:.4f}, p={p:.4f}, {"服从" if is_normal else "不服从"}正态分布')
-        norm_table = [
-            ['Shapiro-Wilk检验', round(stat, 4), round(p, 4),
-             f"{'服从正态分布' if is_normal else '不服从正态分布'} (α={alpha})"],
-        ]
-        return {
-            "tables": [{"header": ['检验项目', '统计量', 'p值', '结论'], "rows": norm_table}],
-            "svg": svg,
-            "metrics": {"W统计量": round(stat, 4), "p值": round(p, 4), "正态性": "服从" if is_normal else "不服从", "显著性水平": alpha},
+def run_comprehensive(df, numeric_cols, options):
+    """综合分析法"""
+    method = options.get('method', 'topsis')
+    weight_method = options.get('weight_method', 'equal')
+    
+    # 计算权重
+    if weight_method == 'equal':
+        weights = np.ones(len(numeric_cols)) / len(numeric_cols)
+    elif weight_method == 'std':
+        data = df[numeric_cols].values
+        stds = data.std(axis=0)
+        weights = stds / (stds.sum() + 1e-10)
+    else:
+        weights = np.ones(len(numeric_cols)) / len(numeric_cols)
+    
+    # 标准化
+    normalized = normalize_minmax(df[numeric_cols].values)
+    
+    # 计算得分
+    if method == 'topsis':
+        scores = topsis(normalized, weights)
+    elif method == 'gray_relational':
+        scores = gray_relational(normalized, weights)
+    else:
+        scores = np.dot(normalized, weights)
+    
+    sorted_indices = np.argsort(scores)[::-1]
+    
+    # 结果表格
+    results_table = []
+    for i, idx in enumerate(sorted_indices[:20]):
+        results_table.append([
+            i + 1,
+            str(df.iloc[idx, 0]) if df.shape[1] > 0 else f"样本{idx+1}",
+            f"{scores[idx]:.4f}"
+        ])
+    
+    weights_table = [[col, f"{weights[i]:.4f}"] for i, col in enumerate(numeric_cols)]
+    
+    # 可视化
+    svgs = []
+    radar_svg = create_radar_chart(normalized[sorted_indices[:8]], numeric_cols, scores[sorted_indices[:8]])
+    if radar_svg:
+        svgs.append(radar_svg)
+    
+    dist_svg = create_score_distribution(scores)
+    if dist_svg:
+        svgs.append(dist_svg)
+    
+    method_names = {'topsis': 'TOPSIS', 'weighted_sum': '加权和法', 'gray_relational': '灰色关联'}
+    
+    return {
+        "svgs": svgs,
+        "tables": [
+            {"header": ["排名", "名称/ID", "综合得分"], "rows": results_table},
+            {"header": ["指标名称", "权重"], "rows": weights_table}
+        ],
+        "metrics": {
+            "样本数": len(df),
+            "指标数": len(numeric_cols),
+            "分析方法": method_names.get(method, method),
+            "最高分": f"{scores.max():.4f}",
+            "最低分": f"{scores.min():.4f}",
+            "平均分": f"{scores.mean():.4f}"
         }
-    except Exception as e:
-        return {"error": f"正态性检验失败: {e}"}
+    }
 
 
-def _generate_qq_plot(data, name):
+def normalize_minmax(data):
+    """Min-Max标准化"""
+    min_vals = data.min(axis=0)
+    max_vals = data.max(axis=0)
+    ranges = max_vals - min_vals
+    ranges[ranges == 0] = 1
+    return (data - min_vals) / ranges
+
+
+def calculate_auto_weights(df, numeric_cols):
+    """自动计算权重（标准差法）"""
+    data = df[numeric_cols].values
+    data_norm = (data - data.min(axis=0)) / (data.max(axis=0) - data.min(axis=0) + 1e-10)
+    stds = data_norm.std(axis=0)
+    weights = stds / (stds.sum() + 1e-10)
+    return weights
+
+
+def calculate_ahp_weights(matrix):
+    """AHP几何平均法计算权重"""
+    matrix = np.array(matrix)
+    n = len(matrix)
+    product = np.prod(matrix, axis=1)
+    geometric_mean = product ** (1/n)
+    weights = geometric_mean / geometric_mean.sum()
+    # 简单一致性检查
+    lambda_max = np.sum(np.dot(matrix, weights) / weights) / n
+    ci = (lambda_max - n) / (n - 1) if n > 1 else 0
+    cr = ci / 0.9 if n == 3 else (ci / 1.12 if n == 4 else ci / 1.24 if n == 5 else ci)
+    return weights
+
+
+def topsis(data, weights):
+    """TOPSIS方法"""
+    weighted = data * weights
+    ideal_best = weighted.max(axis=0)
+    ideal_worst = weighted.min(axis=0)
+    dist_best = np.sqrt(((weighted - ideal_best) ** 2).sum(axis=1))
+    dist_worst = np.sqrt(((weighted - ideal_worst) ** 2).sum(axis=1))
+    return dist_worst / (dist_best + dist_worst + 1e-10)
+
+
+def gray_relational(data, weights):
+    """灰色关联分析"""
+    reference = data.max(axis=0)
+    diff = np.abs(data - reference)
+    min_diff = diff.min(axis=0)
+    max_diff = diff.max(axis=0)
+    rho = 0.5
+    rel_coef = (min_diff + rho * max_diff) / (diff + rho * max_diff + 1e-10)
+    return np.dot(rel_coef, weights)
+
+
+def create_score_bar_chart(scores, labels):
+    """创建得分条形图"""
     try:
-        fig, ax = plt.subplots(figsize=(8, 6))
-        stats.probplot(data, dist="norm", plot=ax)
-        ax.set_title(f'Q-Q Plot: {name}', fontsize=14)
-        ax.set_xlabel('理论分位数')
-        ax.set_ylabel('样本分位数')
-        ax.grid(True, alpha=0.3)
-        buf = BytesIO()
-        fig.savefig(buf, format='svg', bbox_inches='tight')
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ranks = range(1, len(scores) + 1)
+        colors = plt.cm.RdYlGn_r(np.linspace(0.2, 0.8, len(scores)))
+        bars = ax.bar(ranks, scores, color=colors, edgecolor='white', linewidth=0.5)
+        ax.set_xlabel('Rank', fontsize=11)
+        ax.set_ylabel('Comprehensive Score', fontsize=11)
+        ax.set_title('Top 10 Samples Ranking', fontsize=13, fontweight='bold')
+        ax.set_xticks(ranks)
+        ax.set_ylim(0, 1.05)
+        for bar, score in zip(bars, scores):
+            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
+                   f'{score:.3f}', ha='center', va='bottom', fontsize=9)
+        fig.tight_layout()
+        buf = io.BytesIO()
+        fig.savefig(buf, format='svg')
         plt.close(fig)
-        return buf.getvalue().decode('utf-8')
-    except Exception as e:
-        print(f"Q-Q图生成失败: {e}")
+        return buf.getvalue().decode()
+    except:
         return None
 
 
-def anova(options):
-    options = _ensure_dict(options)
-    data_path = options.get('data_path')
-    if not data_path:
-        return {"error": "请先在左侧上传数据文件"}
-    print(f'[方差分析] 参数: dependent_var={options.get("dependent_var")}, group_var={options.get("group_var")}')
+def create_radar_chart(data, labels, scores):
+    """创建雷达图"""
+    if len(data) == 0:
+        return None
     try:
-        df = _read_data(data_path)
-        dependent = options.get('dependent_var') or None
-        group = options.get('group_var') or None
-
-        if not dependent or not group:
-            return {"error": "请指定因变量和分组变量"}
-        if dependent not in df.columns:
-            return {"error": f"因变量 '{dependent}' 不存在"}
-        if group not in df.columns:
-            return {"error": f"分组变量 '{group}' 不存在"}
-
-        groups = []
-        group_names = []
-        for name, gdf in df.groupby(group):
-            vals = gdf[dependent].dropna().values
-            if len(vals) > 0:
-                groups.append(vals)
-                group_names.append(str(name))
-
-        if len(groups) < 2:
-            return {"error": "分组数量不足（需要至少2组）"}
-
-        f_stat, p_value = stats.f_oneway(*groups)
-
-        table = []
-        for i, (name, g) in enumerate(zip(group_names, groups)):
-            table.append([name, len(g), round(g.mean(), 4), round(g.std(), 4)])
-
-        # ANOVA 方差分析表
-        all_vals = np.concatenate(groups)
-        grand_mean = all_vals.mean()
-        ss_between = sum(len(g) * (g.mean() - grand_mean) ** 2 for g in groups)
-        ss_within = sum(sum((x - g.mean()) ** 2 for x in g) for g in groups)
-        df_between = len(groups) - 1
-        df_within = len(all_vals) - len(groups)
-        ms_between = ss_between / df_between if df_between > 0 else 0
-        ms_within = ss_within / df_within if df_within > 0 else 0
-
-        anova_table = [
-            ['组间', round(ss_between, 4), df_between, round(ms_between, 4), round(f_stat, 4), round(p_value, 4)],
-            ['组内', round(ss_within, 4), df_within, round(ms_within, 4), '-', '-'],
-            ['总计', round(ss_between + ss_within, 4), df_between + df_within, '-', '-', '-'],
-        ]
-        anova_header = ['来源', 'SS', 'df', 'MS', 'F值', 'p值']
-
-        svg = _generate_boxplot(df, dependent, group)
-        is_sig = p_value < 0.05
-        print(f'[方差分析] {dependent} ~ {group}: F({df_between},{df_within})={f_stat:.4f}, p={p_value:.4f}, {"显著" if is_sig else "不显著"}')
-        return {
-            "tables": [
-                {"header": ['组别', '样本量', '均值', '标准差'], "rows": table},
-                {"header": anova_header, "rows": anova_table},
-            ],
-            "svg": svg,
-            "metrics": {"F值": round(f_stat, 4), "p值": round(p_value, 4), "显著性": "显著" if is_sig else "不显著", "组数": len(groups)},
-        }
-    except Exception as e:
-        return {"error": f"方差分析失败: {e}"}
-
-
-def _generate_boxplot(df, dependent, group):
-    try:
-        fig, ax = plt.subplots(figsize=(10, 6))
-        gd = df.groupby(group)[dependent].apply(list).to_dict()
-        data = [v for v in gd.values() if len(v) > 0]
-        labels = [str(k) for k, v in gd.items() if len(v) > 0]
-        bp = ax.boxplot(data, labels=labels, patch_artist=True)
-        for patch in bp['boxes']:
-            patch.set_facecolor('lightblue')
-        ax.set_title(f'{dependent} ~ {group}', fontsize=14)
-        ax.set_xlabel(group, fontsize=12)
-        ax.set_ylabel(dependent, fontsize=12)
-        ax.grid(True, alpha=0.3)
-        buf = BytesIO()
+        fig, ax = plt.subplots(figsize=(9, 7), subplot_kw={'projection': 'polar'})
+        angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
+        angles += angles[:1]
+        colors = plt.cm.Set3(np.linspace(0, 1, min(len(data), 8)))
+        for i in range(min(len(data), 8)):
+            values = data[i].tolist()
+            values += values[:1]
+            ax.plot(angles, values, 'o-', linewidth=1.5, color=colors[i],
+                   label=f'#{i+1} (Score: {scores[i]:.3f})')
+            ax.fill(angles, values, alpha=0.1, color=colors[i])
+        ax.set_xticks(angles[:-1])
+        ax.set_xticklabels(labels, size=8)
+        ax.set_ylim(0, 1)
+        ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.0), fontsize=8)
+        ax.set_title('Top 8 Samples - Radar Chart', size=12, pad=20)
+        fig.tight_layout()
+        buf = io.BytesIO()
         fig.savefig(buf, format='svg', bbox_inches='tight')
         plt.close(fig)
-        return buf.getvalue().decode('utf-8')
-    except Exception as e:
-        print(f"箱线图生成失败: {e}")
+        return buf.getvalue().decode()
+    except:
+        return None
+
+
+def create_score_distribution(scores):
+    """创建得分分布图"""
+    try:
+        fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+        axes[0].hist(scores, bins=15, edgecolor='black', alpha=0.7, color='steelblue')
+        axes[0].set_xlabel('Score')
+        axes[0].set_ylabel('Frequency')
+        axes[0].set_title('Score Distribution')
+        axes[0].axvline(scores.mean(), color='red', linestyle='--', label=f'Mean: {scores.mean():.3f}')
+        axes[0].legend()
+        sorted_scores = np.sort(scores)[::-1]
+        axes[1].plot(range(1, len(sorted_scores) + 1), sorted_scores,
+                    'o-', color='steelblue', linewidth=1.5, markersize=3)
+        axes[1].set_xlabel('Rank')
+        axes[1].set_ylabel('Score')
+        axes[1].set_title('Score Rank Curve')
+        axes[1].grid(True, alpha=0.3)
+        fig.tight_layout()
+        buf = io.BytesIO()
+        fig.savefig(buf, format='svg')
+        plt.close(fig)
+        return buf.getvalue().decode()
+    except:
         return None

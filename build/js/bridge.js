@@ -237,6 +237,14 @@ function collectParams(container) {
   const params = {}
   container.querySelectorAll('[data-param]').forEach(el => {
     const key = el.dataset.param
+    if (el.type === 'radio') {
+      if (el.checked) params[key] = el.value
+      return
+    }
+    if (el.multiple) {
+      params[key] = Array.from(el.selectedOptions || []).map(opt => opt.value)
+      return
+    }
     if (el.type === 'number') {
       const v = el.value.trim()
       params[key] = v === '' ? null : Number(v)

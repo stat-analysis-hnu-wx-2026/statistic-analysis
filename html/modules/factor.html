@@ -1,11 +1,86 @@
 <div class="module-content" id="factor">
   <div class="page-header">
-    <div class="header-left"><h1>因子分析</h1><div class="breadcrumb"><i class="fas fa-folder-open"></i> 降维 / 因子</div></div>
+    <div class="header-left">
+      <h1>因子分析 · Factor Analysis</h1>
+      <div class="breadcrumb"><i class="fas fa-folder-open"></i> 降维 / 因子分析</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary btn-run" data-module="Factor" data-func="analyze" disabled>
+        <i class="fas fa-play"></i> 运行分析
+      </button>
+    </div>
   </div>
-  <div class="module-placeholder">
-    <div class="placeholder-icon"><i class="fas fa-cube"></i></div>
-    <h2>因子分析模块</h2>
-    <p>该模块正在开发中，将通过 Pyodide 执行 Python 实现。</p>
-    <ul><li>因子旋转</li><li>因子得分</li><li>因子解释</li></ul>
+
+  <div class="param-card">
+    <div class="param-title"><i class="fas fa-sliders-h" style="color:#2a5c8a;"></i> 分析参数</div>
+    <div class="param-grid">
+      <div class="param-field">
+        <label>因子个数</label>
+        <input type="number" data-param="n_factors" min="2" max="20" placeholder="自动"
+               style="background:#f9fbfd;border:1px solid #d6e0ea;border-radius:40px;padding:10px 18px;font-size:14px;width:140px;text-align:center;">
+      </div>
+    </div>
+    <p style="color:#738fa0; margin-top:10px; font-size:12px;">留空自动选择（特征值 &gt; 1）。请先在左侧上传数据文件。</p>
+  </div>
+
+  <div class="metrics-row">
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-cubes"></i> 提取因子数</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-list"></i> 变量数</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-hashtag"></i> 样本数</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-chart-pie"></i> 累积贡献率</div>
+      <div class="metric-value">--</div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-header">
+      <h3><i class="fas fa-chart-bar" style="margin-right:8px; color:#1e4b6e;"></i>碎石图 · 载荷热图 · 得分散点图</h3>
+    </div>
+    <div class="chart-container" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+    </div>
+    <pre class="py-output" style="margin:12px 8px 0;padding:10px 12px;background:#f6f9fc;border:1px solid #e2eaf2;border-radius:8px;color:#3e5468;font-size:12px;white-space:pre-wrap;">等待运行...</pre>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> 旋转后因子载荷矩阵</span>
+      <span class="badge">含共同度</span>
+    </div>
+    <table class="simple-table">
+      <thead><tr><th>变量</th><th>Factor 1</th><th>Factor 2</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> 方差解释</span>
+      <span class="badge">贡献率与累积贡献率</span>
+    </div>
+    <table class="simple-table">
+      <thead><tr><th>因子</th><th>方差</th><th>贡献率</th><th>累积贡献率</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> 因子得分表</span>
+      <span class="badge">前 10 个样本</span>
+    </div>
+    <table class="simple-table">
+      <thead><tr><th>样本</th><th>F1</th><th>F2</th></tr></thead>
+      <tbody></tbody>
+    </table>
   </div>
 </div>

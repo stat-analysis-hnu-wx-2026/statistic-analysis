@@ -1,3 +1,5 @@
+
+该文件是`README.md`的pdf版本，其内容与`README.md`基本一致
 # StatCore — 多元统计分析
 
 基于 **Pyodide**（Python → WebAssembly）在浏览器本地运行的统计分析工具。
@@ -231,6 +233,15 @@ def analyze(options):
         ],
     }
 ```
+
+**中文字体支持：** 项目已内置中文字体方案。`js/boot.js` 在 Pyodide 初始化时会自动下载 SimHei.ttf 并全局配置 matplotlib（`font.family` + `axes.unicode_minus`）。所有模块可直接在图表中使用中文，无需额外配置：
+
+```python
+plt.title('中文标题')
+plt.xlabel('横轴标签')
+```
+
+字体下载失败时仅打印警告，不影响分析功能正常执行。
 
 ### 步骤 2：编写模块 HTML 模板
 
@@ -517,6 +528,31 @@ def pca(options):
 ```
 
 ___
+
+如果你希望借助ai工具，但是不知道如何使用，可以参考下面的流程：
+
+- 将文件夹根目录的`README.md`发送给ai
+- 修改下面的提示词，并将其发送给ai
+
+```prompt
+请你仔细阅读README.md的要求，完成下面的任务
+
+- 完成xxx模块的python,html代码编写。编写过程需要严格遵守README.md的要求与规范
+  
+- xxx模块应该具备这样的功能：
+	- 功能1
+	- 功能2
+	- ......
+	  
+- 项目的css文件可能没有覆盖一些特殊排版，如果的确需要，那么你可以把相应的css代码写在html中
+- 不用引入过于复杂的机制。非必要，不要修改或者添加任何js代码。
+- 确认html页面搜集了python函数需要的参数
+- 确认python返回的表格，svg图片的顺序与html页面中的一致
+
+```
+
+ai有时候无法完全遵守要求，因此，如果ai生成的代码出现了问题，比如擅自使用了js，以不规范的方式书写了css等等，请删掉相应代码
+___
 ## 五：参数收集机制
 
 `bridge.js` 的 `collectParams(container)` 函数自动扫描模块容器内的所有 `[data-param]` 元素：
@@ -711,7 +747,7 @@ python run_localhost.py --build-only
 python run_localhost.py --port 5173
 ```
 
-大部分情况下，双击`build/index.inline.html`或者`build/index.html`可以正常运行。如果遇到无法运行的情况，可以尝试启动服务器，并使用浏览器打开对应端口。默认情况下，需要把[http://127.0.0.1:8000]()输入到浏览器中。如果你指定了端口，比如5173，那么就打开[http://127.0.0.1:5173]()
+在简单场景下，双击`build/index.inline.html`或者`build/index.html`可以正常运行。如果遇到无法运行的情况，可以尝试启动服务器，并使用浏览器打开对应端口。默认情况下，需要把[http://127.0.0.1:8000]()输入到浏览器中。如果你指定了端口，比如5173，那么就打开[http://127.0.0.1:5173]()
 
 如果遇到卡顿，迟迟加载不出来，可以考虑刷新/等一会/更换网络。
 

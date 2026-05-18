@@ -65,6 +65,30 @@ async function initPyodide() {
       setPyStatus(`<i class="fas fa-spinner fa-pulse"></i> 导入 ${s.dataset.module}...`, pct)
     }
 
+    setPyStatus('<i class="fas fa-spinner fa-pulse"></i> 加载中文字体...', 95)
+    try {
+      const FONT_URL = 'https://raw.githubusercontent.com/StellarCN/scp_zh/master/fonts/SimHei.ttf'
+      const resp = await fetch(FONT_URL)
+      if (resp.ok) {
+        pyodide.FS.writeFile('/home/pyodide/SimHei.ttf', new Uint8Array(await resp.arrayBuffer()))
+      }
+    } catch (e) {
+      console.warn('中文字体下载失败，中文可能显示为方块:', e)
+    }
+
+    await pyodide.runPythonAsync(`
+import matplotlib.font_manager as fm
+import matplotlib.pyplot as plt
+import warnings
+try:
+    fm.fontManager.addfont('/home/pyodide/SimHei.ttf')
+    fp = fm.FontProperties(fname='/home/pyodide/SimHei.ttf')
+    plt.rcParams['font.family'] = fp.get_name()
+    plt.rcParams['axes.unicode_minus'] = False
+except Exception as e:
+    warnings.warn(f"中文字体配置失败: {e}")
+`)
+
     setPyStatus('<i class="fas fa-check-circle" style="color:#2e7d32;"></i> Pyodide 已就绪', 100)
     document.querySelectorAll('.btn-run').forEach(b => { b.disabled = false })
     document.dispatchEvent(new Event('pyodideReady'))

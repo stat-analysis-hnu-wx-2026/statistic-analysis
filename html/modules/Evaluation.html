@@ -1,0 +1,186 @@
+<div class="module-content" id="Evaluation">
+    <div class="page-header">
+        <div class="header-left">
+            <h1><i class="fas fa-chart-line"></i> 综合分析评价系统</h1>
+            <div class="breadcrumb">
+                <i class="fas fa-calculator"></i> 综合评价 / 综合分析
+            </div>
+        </div>
+    </div>
+
+    <!-- 方法选择卡片 -->
+    <div class="param-card">
+        <div class="param-title">
+            <i class="fas fa-method"></i> 分析方法选择
+        </div>
+        <div class="method-selector">
+            <label class="method-option" id="method-ahp">
+                <input type="radio" name="method_type" value="ahp" data-param="method_type" checked>
+                <div class="method-card">
+                    <i class="fas fa-layer-group"></i>
+                    <span class="method-name">层次分析法 (AHP)<br>基于判断矩阵的权重计算</span>
+                    <!-- <span class="method-desc">基于判断矩阵的权重计算</span> -->
+                </div>
+            </label>
+            <label class="method-option" id="method-comprehensive">
+                <input type="radio" name="method_type" value="comprehensive" data-param="method_type">
+                <div class="method-card">
+                    <i class="fas fa-chart-pie"></i>
+                    <span class="method-name">综合分析法<br>TOPSIS / 加权和 / 灰色关联</span>
+                    <!-- <span class="method-desc">TOPSIS / 加权和 / 灰色关联</span> -->
+                </div>
+            </label>
+        </div>
+    </div>
+
+    <!-- AHP专用参数 -->
+    <div id="ahp-params" class="param-card method-params">
+        <div class="param-title">
+            <i class="fas fa-table"></i> AHP参数配置
+        </div>
+        <p class="param-hint" style="margin:0 0 12px 4px;">选择了「层次分析法」时填写下方判断矩阵，留空则自动计算权重</p>
+        <div class="param-grid">
+            <div class="param-field param-field-full">
+                <label>判断矩阵 (JSON格式)</label>
+                <textarea class="fake-select-control" data-param="judgement_matrix" rows="4" placeholder='例如: [[1,3,2], [1/3,1,1/2], [1/2,2,1]]'></textarea>
+                <p class="param-hint">留空则自动计算权重（标准差法）。行/列顺序与指标选择一致</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 综合分析法专用参数 -->
+    <div id="comprehensive-params" class="param-card method-params">
+        <div class="param-title">
+            <i class="fas fa-sliders-h"></i> 综合分析法参数配置
+        </div>
+        <p class="param-hint" style="margin:0 0 12px 4px;">选择了「综合分析法」时在此区域配置方法及权重</p>
+        <div class="param-grid">
+            <div class="param-field">
+                <label>分析方法</label>
+                <select class="fake-select-control" data-param="method">
+                    <option value="topsis" selected>TOPSIS法 (理想解法)</option>
+                    <option value="weighted_sum">加权和法</option>
+                    <option value="gray_relational">灰色关联分析法</option>
+                </select>
+            </div>
+            <div class="param-field">
+                <label>权重设置</label>
+                <select class="fake-select-control" data-param="weight_method">
+                    <option value="equal" selected>等权重法</option>
+                    <option value="std">标准差法</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通用指标选择 -->
+    <div class="param-card">
+        <div class="param-title">
+            <i class="fas fa-chart-simple"></i> 评价指标选择
+        </div>
+        <div class="param-grid">
+            <div class="param-field param-field-full">
+                <input class="fake-select-control" data-param="indicators" type="text"
+                       placeholder="例如: GDP, 人均收入, 绿化率" value="">
+                <p class="param-hint">多个指标用英文逗号分隔，留空则使用所有数值列</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 运行按钮 -->
+    <div class="action-bar">
+        <button class="btn-primary btn-run" data-module="Evaluation" data-func="analyze">
+            <i class="fas fa-play"></i> 运行分析
+        </button>
+    </div>
+
+    <!-- 指标卡片 -->
+    <div class="metrics-row">
+        <div class="metric-item"><div class="metric-label"><i class="fas fa-database"></i> 样本数</div><div class="metric-value">-</div></div>
+        <div class="metric-item"><div class="metric-label"><i class="fas fa-chart-bar"></i> 指标数</div><div class="metric-value">-</div></div>
+        <div class="metric-item" id="metric-method"><div class="metric-label"><i class="fas fa-cog"></i> 方法</div><div class="metric-value">-</div></div>
+        <div class="metric-item"><div class="metric-label"><i class="fas fa-trophy"></i> 最高分</div><div class="metric-value">-</div></div>
+        <div class="metric-item"><div class="metric-label"><i class="fas fa-flag-checkered"></i> 最低分</div><div class="metric-value">-</div></div>
+        <div class="metric-item"><div class="metric-label"><i class="fas fa-chart-line"></i> 平均分</div><div class="metric-value">-</div></div>
+    </div>
+
+    <!-- 图表区域 -->
+    <div class="chart-card">
+        <div class="chart-header"><h3><i class="fas fa-chart-simple"></i> 可视化结果</h3></div>
+        <div class="chart-container" style="min-height: 300px; display: flex; align-items: center; justify-content: center; color: #7a8c9d;">
+            <i class="fas fa-chart-line"></i> 点击「运行分析」后显示图形
+        </div>
+        <pre class="py-output" style="margin:12px 8px 0;padding:10px 12px;background:#f6f9fc;border:1px solid #e2eaf2;border-radius:8px;color:#3e5468;font-size:12px;white-space:pre-wrap;">等待运行...</pre>
+    </div>
+
+    <!-- 排名表格 -->
+    <div class="table-preview">
+        <div class="preview-header"><span><i class="fas fa-medal"></i> 综合评价排名</span><span class="badge">得分越高越好</span></div>
+        <table class="simple-table"><thead><tr><th>排名</th><th>名称/ID</th><th>综合得分</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <!-- 权重表格 -->
+    <div class="table-preview" style="margin-top: 24px;">
+        <div class="preview-header"><span><i class="fas fa-weight-hanging"></i> 指标权重</span><span class="badge">各指标重要性系数</span></div>
+        <table class="simple-table"><thead><tr><th>指标名称</th><th>权重</th></tr></thead><tbody></tbody></table>
+    </div>
+</div>
+
+<style>
+#Evaluation .method-selector {
+    display: flex;
+    gap: 16px;
+    padding: 8px 0;
+}
+#Evaluation .method-option {
+    flex: 1;
+    cursor: pointer;
+}
+#Evaluation .method-option input {
+    display: none;
+}
+#Evaluation .method-card {
+    background: #f8fafc;
+    border: 2px solid #e2eaf2;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    transition: all 0.2s;
+}
+#Evaluation .method-option input:checked + .method-card {
+    background: linear-gradient(135deg, #1e4b6e 0%, #2c6288 100%);
+    border-color: #1e4b6e;
+    color: white;
+}
+#Evaluation .method-card i {
+    font-size: 28px;
+    margin-bottom: 8px;
+    display: block;
+}
+#Evaluation .method-name {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+}
+#Evaluation .method-desc {
+    font-size: 11px;
+    opacity: 0.8;
+}
+#Evaluation .method-option input:checked + .method-card .method-desc {
+    opacity: 0.9;
+}
+#Evaluation .param-field-full {
+    grid-column: 1 / -1;
+}
+#Evaluation .param-hint {
+    font-size: 12px;
+    color: #738fa0;
+    margin-top: 6px;
+    margin-bottom: 0;
+}
+#Evaluation .action-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+</style>
