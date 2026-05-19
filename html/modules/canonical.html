@@ -1,11 +1,127 @@
-<div class="module-content" id="canonical">
+<div class="module-content" id="cca">
   <div class="page-header">
-    <div class="header-left"><h1>典型相关</h1><div class="breadcrumb"><i class="fas fa-folder-open"></i> 关系 / 典型</div></div>
+    <div class="header-left">
+      <h1>典型相关分析 · CCA</h1>
+      <div class="breadcrumb">
+        <i class="fas fa-folder-open"></i> 相关分析 / CCA
+      </div>
+      <div class="header-actions">
+        <button class="btn-primary btn-run" data-module="CanonicalCorrelation" data-func="analyze" disabled>
+          <i class="fas fa-play"></i> 运行分析
+        </button>
+      </div>
+    </div>
   </div>
-  <div class="module-placeholder">
-    <div class="placeholder-icon"><i class="fas fa-link"></i></div>
-    <h2>典型相关模块</h2>
-    <p>该模块正在开发中，将通过 Pyodide 执行 Python 实现。</p>
-    <ul><li>典型变量提取</li><li>典型相关系数</li><li>结构分析</li></ul>
+
+  <!-- 图表区域 -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <h3><i class="fas fa-chart-bar" style="margin-right:8px; color:#1e4b6e;"></i>典型相关系数 · 载荷热图 · 散点图 · 冗余度 · 权重</h3>
+    </div>
+    <div class="chart-container" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+    </div>
+    <pre class="py-output" style="margin:12px 8px 0;padding:10px 12px;background:#f6f9fc;border:1px solid #e2eaf2;border-radius:8px;color:#3e5468;font-size:12px;white-space:pre-wrap;">等待运行...</pre>
   </div>
+
+  <!-- 指标行 -->
+  <div class="metrics-row">
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-users"></i> 样本量</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-columns"></i> X变量数</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-columns"></i> Y变量数</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-check-circle"></i> 显著对数</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-link"></i> 最大相关系数</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-file-alt"></i> 解读</div>
+      <div class="metric-value" style="font-size:14px;white-space:normal;">--</div>
+    </div>
+  </div>
+
+  <!-- 表格区域 -->
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> 典型相关系数与显著性检验</span>
+    </div>
+    <table class="simple-table">
+      <thead>
+        <tr><th>典型变量对</th><th>相关系数</th><th>卡方值</th><th>p值</th><th>显著性</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> X组典型权重</span>
+    </div>
+    <table class="simple-table">
+      <thead>
+        <tr><th>变量</th><th>PC1</th><th>PC2</th><th>PC3</th><th>PC4</th><th>PC5</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> Y组典型权重</span>
+    </div>
+    <table class="simple-table">
+      <thead>
+        <tr><th>变量</th><th>PC1</th><th>PC2</th><th>PC3</th><th>PC4</th><th>PC5</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> X组结构载荷</span>
+    </div>
+    <table class="simple-table">
+      <thead>
+        <tr><th>变量</th><th>PC1</th><th>PC2</th><th>PC3</th><th>PC4</th><th>PC5</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> Y组结构载荷</span>
+    </div>
+    <table class="simple-table">
+      <thead>
+        <tr><th>变量</th><th>PC1</th><th>PC2</th><th>PC3</th><th>PC4</th><th>PC5</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> 典型变量得分（前20个样本）</span>
+    </div>
+    <table class="simple-table">
+      <thead>
+        <tr><th>样本</th><th>PC1</th><th>PC2</th><th>PC3</th><th>PC4</th><th>PC5</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
 </div>

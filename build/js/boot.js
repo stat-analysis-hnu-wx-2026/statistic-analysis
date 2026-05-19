@@ -66,14 +66,18 @@ async function initPyodide() {
     }
 
     setPyStatus('<i class="fas fa-spinner fa-pulse"></i> 加载中文字体...', 95)
-    try {
-      const FONT_URL = 'https://raw.githubusercontent.com/StellarCN/scp_zh/master/fonts/SimHei.ttf'
-      const resp = await fetch(FONT_URL)
-      if (resp.ok) {
-        pyodide.FS.writeFile('/home/pyodide/SimHei.ttf', new Uint8Array(await resp.arrayBuffer()))
-      }
-    } catch (e) {
-      console.warn('中文字体下载失败，中文可能显示为方块:', e)
+    const fontUrls = [
+      'https://cdn.jsdelivr.net/gh/StellarCN/scp_zh@master/fonts/SimHei.ttf',
+      'https://raw.githubusercontent.com/StellarCN/scp_zh/master/fonts/SimHei.ttf'
+    ]
+    for (const url of fontUrls) {
+      try {
+        const resp = await fetch(url, { signal: AbortSignal.timeout(15000) })
+        if (resp.ok) {
+          pyodide.FS.writeFile('/home/pyodide/SimHei.ttf', new Uint8Array(await resp.arrayBuffer()))
+          break
+        }
+      } catch (_) {}
     }
 
     await pyodide.runPythonAsync(`
