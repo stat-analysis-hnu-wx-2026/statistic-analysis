@@ -10,9 +10,8 @@
     {"type": "button", "module": "canonical", "icon": "fas fa-link", "label": "典型相关"},
     {"type": "button", "module": "extended", "icon": "fas fa-plus-minus", "label": "扩展线性"},
     {"type": "divider"},
-    {"type": "button", "module": "python", "icon": "fas fa-code", "label": "Python 代码"},
-    {"type": "button", "icon": "fas fa-history", "label": "历史记录"},
-    {"type": "button", "module": "test", "icon": "fas fa-plus-minus", "label": "测试"}
+    {"type": "button", "module": "python", "icon": "fas fa-code", "label": "Python 代码"}
+
   ],
   "python_order": [
     "DataClean", 
@@ -24,8 +23,7 @@
     "ExtendedLinear",
     "Factor",
     "Pca",
-    "Visualization",
-    "test"
+    "Visualization"
   ]
 
 }
