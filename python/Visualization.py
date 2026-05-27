@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import io
 
 def generate_visualization(options):
-    # 1. 兼容 Pyodide 的 JsProxy 转换
     if not isinstance(options, dict):
         to_py = getattr(options, "to_py", None)
         if callable(to_py):
@@ -11,73 +10,70 @@ def generate_visualization(options):
         else:
             options = dict(options)
             
-    # 2. 通过 options.get 读取数据路径
     data_path = options.get('data_path')
     if not data_path:
         return {"error": "请先在左侧上传数据文件"}
     
-    chart_type = options.get('chart_type', '散点图')
+    chart_type = options.get('chart_type', '单变量条图')
     x_var = options.get('x_var')
     y_var = options.get('y_var')
     
     try:
-        df = pd.read_csv(data_path)
-        
+        if str(data_path).endswith('.csv'):
+            df = pd.read_csv(data_path)
+        else:
+            df = pd.read_excel(data_path)
+            
+        if df.select_dtypes(include=['object']).shape[1] > 0:
+            first_obj_col = df.select_dtypes(include=['object']).columns[0]
+            df.set_index(first_obj_col, inplace=True)
+            
         data_volume = len(df)
         dimensions = df.shape[1]
         missing_values = int(df.isna().sum().sum())
         
         numeric_df = df.select_dtypes(include='number')
-        desc_table = []
-        for col in numeric_df.columns:
-            mean_val = numeric_df[col].mean()
-            std_val = numeric_df[col].std()
-            desc_table.append([
-                str(col), 
-                f"{mean_val:.4f}" if pd.notna(mean_val) else "-", 
-                f"{std_val:.4f}" if pd.notna(std_val) else "-"
-            ])
         
-        # 3. 纯 Matplotlib 生成 SVG 字符串
-        fig, ax = plt.subplots(figsize=(10, 5))
+        mean_series = numeric_df.mean()
+        mean_table = [["变量", "均值"]] + [[str(k), f"{v:.4f}"] for k, v in mean_series.items()]
         
-        if chart_type == '散点图' and x_var in df.columns and y_var in df.columns:
-            ax.scatter(df[x_var], df[y_var], alpha=0.7)
-            ax.set_xlabel(x_var)
-            ax.set_ylabel(y_var)
-        elif chart_type == '折线图' and x_var in df.columns and y_var in df.columns:
-            ax.plot(df[x_var], df[y_var], marker='o')
-            ax.set_xlabel(x_var)
-            ax.set_ylabel(y_var)
-        elif chart_type == '箱线图' and y_var in df.columns:
-            if x_var and x_var in df.columns:
-                groups = df.groupby(x_var)[y_var].apply(list)
-                ax.boxplot(groups.values, labels=groups.keys())
-                ax.set_xlabel(x_var)
-            else:
-                ax.boxplot(df[y_var].dropna())
-            ax.set_ylabel(y_var)
-        elif chart_type == '热力图':
-            corr = numeric_df.corr()
-            cax = ax.matshow(corr, cmap='Blues', aspect='auto')
-            fig.colorbar(cax)
-            ax.set_xticks(range(len(corr.columns)))
-            ax.set_yticks(range(len(corr.columns)))
-            ax.set_xticklabels(corr.columns, rotation=45)
-            ax.set_yticklabels(corr.columns)
-        else:
-            ax.text(0.5, 0.5, '图表参数不足或列名不存在\n请检查 X轴/Y轴 变量是否填写正确', 
-                    ha='center', va='center', fontsize=12, color='gray')
+        cov_df = numeric_df.cov()
+        cov_table = [["变量"] + list(cov_df.columns)]
+        for idx, row in cov_df.iterrows():
+            cov_table.append([str(idx)] + [f"{x:.4f}" for x in row])
+            
+        corr_df = numeric_df.corr()
+        corr_table = [["变量"] + list(corr_df.columns)]
+        for idx, row in corr_df.iterrows():
+            corr_table.append([str(idx)] + [f"{x:.4f}" for x in row])
 
-        ax.set_title(chart_type)
-        fig.tight_layout()
+        plt.rcParams['font.sans-serif'] = ['SimHei']
+        plt.rcParams['axes.unicode_minus'] = False
         
+        if chart_type == '多变量矩阵散点图':
+            axes = pd.plotting.scatter_matrix(numeric_df, figsize=(10, 10))
+            fig = axes[0, 0].get_figure()
+        else:
+            fig, ax = plt.subplots(figsize=(10, 5))
+            if chart_type == '单变量条图' and y_var in df.columns:
+                df[y_var].plot(kind='bar', ax=ax)
+            elif chart_type == '多变量条图':
+                numeric_df.plot(kind='bar', ax=ax)
+            elif chart_type == '基于单样品的条图' and x_var in df.index:
+                df.loc[[x_var]].plot(kind='bar', ax=ax)
+            elif chart_type == '统计量的箱线图':
+                numeric_df.plot(kind='box', ax=ax)
+            elif chart_type == '两变量散点图' and x_var in df.columns and y_var in df.columns:
+                df.plot(kind='scatter', x=x_var, y=y_var, ax=ax)
+            else:
+                ax.text(0.5, 0.5, '参数不足或变量不存在', ha='center', va='center', fontsize=12)
+            fig.tight_layout()
+            
         buf = io.BytesIO()
         fig.savefig(buf, format='svg')
-        plt.close(fig) # 释放 WASM 内存
+        plt.close(fig)
         svg_str = buf.getvalue().decode('utf-8')
         
-        # 4. 返回对应格式的字典
         return {
             "svgs": [svg_str],
             "metrics": {
@@ -87,11 +83,42 @@ def generate_visualization(options):
             },
             "tables": [
                 {
-                    "header": ["特征", "均值", "标准差"],
-                    "rows": desc_table if desc_table else [["-", "-", "-"]]
+                    "title": "变量均值",
+                    "header": mean_table[0],
+                    "rows": mean_table[1:]
+                },
+                {
+                    "title": "协方差矩阵",
+                    "header": cov_table[0],
+                    "rows": cov_table[1:]
+                },
+                {
+                    "title": "相关系数矩阵",
+                    "header": corr_table[0],
+                    "rows": corr_table[1:]
                 }
             ]
         }
         
     except Exception as e:
         return {"error": str(e)}
+
+if __name__ == '__main__':
+    test_options = {
+        'data_path': 'test_data.csv',
+        'chart_type': '多变量条图',
+        'x_var': '地区',
+        'y_var': '食品'
+    }
+    
+    result = generate_visualization(test_options)
+    
+    if "error" in result:
+        print("运行出错:", result["error"])
+    else:
+        print("指标计算成功:", result["metrics"])
+        print("表格生成成功, 包含表格数量:", len(result["tables"]))
+        
+        with open("test_output.svg", "w", encoding="utf-8") as f:
+            f.write(result["svgs"][0])
+        print("\n图表已保存到当前目录下的 test_output.svg，你可以双击用浏览器打开查看图表是否正确。")
