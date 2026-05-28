@@ -20,19 +20,26 @@ def analyze(options):
         return {"error": f"读取数据失败: {e}"}
 
     first_col = df.columns[0]
-    if df[first_col].dtype == 'object':
-        sample_labels = df[first_col].tolist()
+    is_object_first_col = df[first_col].dtype == 'object'
+    if is_object_first_col:
         df_numeric = df.drop(columns=[first_col])
     else:
-        sample_labels = [f"S{i+1}" for i in range(len(df))]
         df_numeric = df.copy()
 
-    df_numeric = df_numeric.select_dtypes(include=[np.number]).dropna()
+    df_numeric = df_numeric.select_dtypes(include=[np.number])
+    valid_idx = df_numeric.dropna().index
+    df_numeric = df_numeric.loc[valid_idx]
+
     if df_numeric.shape[1] < 3:
         return {"error": f"数值变量仅 {df_numeric.shape[1]} 个，至少需要 3 个"}
 
     n_samples, n_features = df_numeric.shape
     feature_names = df_numeric.columns.tolist()
+
+    if is_object_first_col:
+        sample_labels = df.loc[valid_idx, first_col].tolist()
+    else:
+        sample_labels = [f"S{i+1}" for i in range(len(valid_idx))]
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(df_numeric.values)
@@ -72,7 +79,7 @@ def analyze(options):
     communality = np.sum(loadings**2, axis=1)
 
     variance = np.sum(loadings**2, axis=0)
-    total_var = np.sum(variance)
+    total_var = n_features
     if total_var > 0:
         proportion_var = variance / total_var
     else:
@@ -103,7 +110,7 @@ def analyze(options):
     if n_factors >= 2:
         fig3, ax3 = plt.subplots(figsize=(8, 6))
         ax3.scatter(scores[:, 0], scores[:, 1], c='steelblue', s=60, alpha=0.7, edgecolors='#1e3b5c')
-        for i, lbl in enumerate(sample_labels[:len(scores)]):
+        for i, lbl in enumerate(sample_labels):
             ax3.annotate(lbl, (scores[i, 0], scores[i, 1]),
                         textcoords="offset points", xytext=(5, 5), fontsize=7, alpha=0.8)
         ax3.axhline(y=0, color='grey', linestyle='--', alpha=0.5)

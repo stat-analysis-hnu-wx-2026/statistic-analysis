@@ -1,11 +1,95 @@
 <div class="module-content" id="extended">
   <div class="page-header">
-    <div class="header-left"><h1>扩展线性</h1><div class="breadcrumb"><i class="fas fa-folder-open"></i> 扩展 / 线性</div></div>
+    <div class="header-left">
+      <h1>扩展线性模型</h1>
+      <div class="breadcrumb"><i class="fas fa-folder-open"></i> 扩展 / 线性模型 / 正则化回归</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary btn-run" data-module="ExtendedLinear" data-func="analyze">
+        <i class="fas fa-play"></i> 运行分析
+      </button>
+    </div>
   </div>
-  <div class="module-placeholder">
-    <div class="placeholder-icon"><i class="fas fa-plus-minus"></i></div>
-    <h2>扩展线性模块</h2>
-    <p>该模块正在开发中，将通过 Pyodide 执行 Python 实现。</p>
-    <ul><li>岭回归</li><li>Lasso回归</li><li>弹性网回归</li></ul>
+
+  <div class="param-card">
+    <div class="param-title"><i class="fas fa-sliders-h" style="color:#2a5c8a;"></i> 模型参数</div>
+    <div class="param-grid">
+      <div class="param-field">
+        <label>模型类型</label>
+        <select class="fake-select-control" data-param="model_type">
+          <option value="ridge" selected>Ridge 岭回归</option>
+          <option value="lasso">Lasso 回归</option>
+          <option value="elasticnet">ElasticNet 弹性网</option>
+        </select>
+      </div>
+      <div class="param-field">
+        <label>因变量列名</label>
+        <input class="fake-select-control" data-param="target_col" type="text" placeholder="留空默认最后一列">
+      </div>
+      <div class="param-field">
+        <label>alpha</label>
+        <input class="fake-select-control" data-param="alpha" type="number" min="0.001" step="0.1" value="1.0">
+      </div>
+      <div class="param-field">
+        <label>l1_ratio</label>
+        <input class="fake-select-control" data-param="l1_ratio" type="number" min="0" max="1" step="0.1" value="0.5">
+      </div>
+      <div class="param-field">
+        <label>测试集比例</label>
+        <input class="fake-select-control" data-param="test_size" type="number" min="0.1" max="0.5" step="0.05" value="0.25">
+      </div>
+    </div>
+    <p style="color:#738fa0; margin-top:10px; font-size:12px;">因变量列名留空时，默认使用最后一个数值列。请先在左侧上传数据文件。</p>
+  </div>
+
+  <div class="metrics-row">
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-hashtag"></i> 样本数</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-list"></i> 变量数</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-chart-line"></i> R²</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-ruler-combined"></i> RMSE</div>
+      <div class="metric-value">--</div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-header">
+      <h3><i class="fas fa-chart-line" style="margin-right:8px; color:#1e4b6e;"></i>模型拟合与残差诊断</h3>
+    </div>
+    <div class="chart-container" style="min-height:240px;display:grid;grid-template-columns:1fr 1fr;gap:16px;color:#7a8c9d;">
+      <div style="display:flex;align-items:center;justify-content:center;min-height:220px;">点击“运行分析”后显示图形</div>
+    </div>
+    <pre class="py-output" style="margin:12px 8px 0;padding:10px 12px;background:#f6f9fc;border:1px solid #e2eaf2;border-radius:8px;color:#3e5468;font-size:12px;white-space:pre-wrap;">等待运行...</pre>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> 回归系数</span>
+      <span class="badge">按绝对值排序</span>
+    </div>
+    <table class="simple-table">
+      <thead><tr><th>变量</th><th>标准化系数</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-clipboard-list"></i> 模型指标</span>
+      <span class="badge">测试集结果</span>
+    </div>
+    <table class="simple-table">
+      <thead><tr><th>指标</th><th>值</th></tr></thead>
+      <tbody></tbody>
+    </table>
   </div>
 </div>
