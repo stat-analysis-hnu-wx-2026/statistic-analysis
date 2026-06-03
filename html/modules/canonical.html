@@ -1,14 +1,44 @@
 <div class="module-content" id="cca">
+
+  
+
+
   <div class="page-header">
     <div class="header-left">
       <h1>典型相关分析 · CCA</h1>
       <div class="breadcrumb">
         <i class="fas fa-folder-open"></i> 相关分析 / CCA
       </div>
-      <div class="header-actions">
-        <button class="btn-primary btn-run" data-module="CanonicalCorrelation" data-func="analyze" disabled>
-          <i class="fas fa-play"></i> 运行分析
-        </button>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary btn-run" data-module="CanonicalCorrelation" data-func="analyze" disabled>
+        <i class="fas fa-play"></i> 运行分析
+      </button>
+    </div>
+  </div>
+
+  <!-- 变量选择 -->
+  <div class="param-card">
+    <div class="param-title"><i class="fas fa-sliders-h"></i> 变量选择</div>
+    <p class="param-hint" style="margin:0 0 12px 4px;">选择 X 组和 Y 组的变量，留空则自动将数值列对半分</p>
+    <div class="param-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="param-field">
+        <label>X 组变量</label>
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
+          <button class="btn-load-columns btn-secondary" data-module="CanonicalCorrelation" data-func="get_columns" style="padding:6px 14px;font-size:12px;">
+            <i class="fas fa-sync"></i> 加载列名
+          </button>
+          <span class="load-status" style="font-size:11px;color:#738fa0;"></span>
+        </div>
+        <select multiple class="fake-select-control column-select" data-param="x_cols" size="5" style="width:100%;">
+          <option value="" disabled>请先点击「加载列名」</option>
+        </select>
+      </div>
+      <div class="param-field">
+        <label>Y 组变量</label>
+        <select multiple class="fake-select-control column-select" data-param="y_cols" size="5" style="width:100%;">
+          <option value="" disabled>请先点击「加载列名」</option>
+        </select>
       </div>
     </div>
   </div>
@@ -124,4 +154,34 @@
     </table>
   </div>
 
+<style>
+/* 变量选择多选框样式覆盖 */
+#cca .column-select {
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 13px;
+  min-width: unset;
+}
+
+#cca .column-select option {
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* 细滚动条 */
+#cca .column-select::-webkit-scrollbar {
+  width: 6px;
+}
+#cca .column-select::-webkit-scrollbar-track {
+  background: #f0f4f8;
+  border-radius: 3px;
+}
+#cca .column-select::-webkit-scrollbar-thumb {
+  background: #c0cfdc;
+  border-radius: 3px;
+}
+#cca .column-select::-webkit-scrollbar-thumb:hover {
+  background: #a0b4c6;
+}
+</style>
 </div>

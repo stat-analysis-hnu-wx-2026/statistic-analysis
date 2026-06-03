@@ -34,8 +34,11 @@ def analyze(options):
         selected_indicators = [c.strip() for c in selected_indicators.split(',') if c.strip()]
     if selected_indicators and isinstance(selected_indicators, list) and len(selected_indicators) > 0:
         available_cols = [col for col in selected_indicators if col in numeric_cols]
-        if len(available_cols) >= 2:
+        # 只要用户明确指定了指标，就只使用匹配到的列（至少 1 列即可生效）
+        if len(available_cols) >= 1:
             numeric_cols = available_cols
+            if len(numeric_cols) < 2:
+                return {"error": f"指标匹配后不足 2 个数值列（匹配到: {numeric_cols}）"}
     
     if method_type == 'ahp':
         return run_ahp(df, numeric_cols, options)
@@ -45,18 +48,35 @@ def analyze(options):
 
 def run_ahp(df, numeric_cols, options):
     """层次分析法"""
-    # 获取判断矩阵
-    judgement_matrix_str = options.get('judgement_matrix', '')
+    # 判断矩阵获取优先级：多矩阵(judgement_matrices) > 单矩阵(judgement_matrix) > 自动权重
     weights = None
-    
-    if judgement_matrix_str:
+
+    # 1. 尝试获取多判断矩阵（来自网格矩阵UI）
+    judgement_matrices_str = options.get('judgement_matrices', '')
+    if judgement_matrices_str:
         try:
-            judgement_matrix = json.loads(judgement_matrix_str)
-            if len(judgement_matrix) == len(numeric_cols):
-                weights = calculate_ahp_weights(judgement_matrix)
+            matrices = json.loads(judgement_matrices_str)
+            if isinstance(matrices, list) and len(matrices) > 0:
+                # 过滤空矩阵
+                valid_matrices = [m for m in matrices if len(m) == len(numeric_cols)]
+                if len(valid_matrices) >= 1:
+                    agg_matrix = aggregate_matrices(valid_matrices)
+                    weights = calculate_ahp_weights(agg_matrix)
         except:
             pass
+
+    # 2. 尝试获取单判断矩阵（向后兼容）
+    if weights is None:
+        judgement_matrix_str = options.get('judgement_matrix', '')
+        if judgement_matrix_str:
+            try:
+                judgement_matrix = json.loads(judgement_matrix_str)
+                if len(judgement_matrix) == len(numeric_cols):
+                    weights = calculate_ahp_weights(judgement_matrix)
+            except:
+                pass
     
+    # 3. 自动计算权重（默认）
     if weights is None:
         weights = calculate_auto_weights(df, numeric_cols)
     
@@ -103,17 +123,28 @@ def run_ahp(df, numeric_cols, options):
 def run_comprehensive(df, numeric_cols, options):
     """综合分析法"""
     method = options.get('method', 'topsis')
-    weight_method = options.get('weight_method', 'equal')
     
-    # 计算权重
-    if weight_method == 'equal':
-        weights = np.ones(len(numeric_cols)) / len(numeric_cols)
-    elif weight_method == 'std':
+    # 权重优先级：AHP 判断矩阵 → 标准差法 → 等权重法
+    weights = None
+    judgement_matrices_str = options.get('judgement_matrices', '')
+    if judgement_matrices_str:
+        try:
+            matrices = json.loads(judgement_matrices_str)
+            if isinstance(matrices, list) and len(matrices) > 0:
+                valid_matrices = [m for m in matrices if len(m) == len(numeric_cols)]
+                if len(valid_matrices) >= 1:
+                    agg_matrix = aggregate_matrices(valid_matrices)
+                    weights = calculate_ahp_weights(agg_matrix)
+        except:
+            pass
+    
+    if weights is None:
         data = df[numeric_cols].values
         stds = data.std(axis=0)
-        weights = stds / (stds.sum() + 1e-10)
-    else:
-        weights = np.ones(len(numeric_cols)) / len(numeric_cols)
+        if stds.sum() > 0:
+            weights = stds / (stds.sum() + 1e-10)
+        else:
+            weights = np.ones(len(numeric_cols)) / len(numeric_cols)
     
     # 标准化
     normalized = normalize_minmax(df[numeric_cols].values)
@@ -184,6 +215,29 @@ def calculate_auto_weights(df, numeric_cols):
     stds = data_norm.std(axis=0)
     weights = stds / (stds.sum() + 1e-10)
     return weights
+
+
+def aggregate_matrices(matrices_list):
+    """多判断矩阵逐元素几何平均法聚合
+
+    将多个专家的判断矩阵进行逐元素几何平均，得到聚合判断矩阵。
+
+    Args:
+        matrices_list: list of 2D lists/arrays, 每个元素是一个 N×N 判断矩阵
+
+    Returns:
+        np.array: 聚合后的判断矩阵
+    """
+    if not matrices_list or len(matrices_list) == 0:
+        return None
+    # 转换为 numpy 数组，shape = (k, n, n)
+    matrices_arr = np.array([np.array(m) for m in matrices_list])
+    # 逐元素相乘
+    product = np.prod(matrices_arr, axis=0)
+    # 几何平均
+    k = len(matrices_list)
+    geom_mean = product ** (1.0 / k)
+    return geom_mean
 
 
 def calculate_ahp_weights(matrix):

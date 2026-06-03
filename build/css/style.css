@@ -725,3 +725,284 @@ body {
 .python-code code {
   white-space: pre;
 }
+
+/* ===== 数据清洗面板 ===== */
+.clean-panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clean-panel {
+  background: #fff;
+  border-radius: 16px;
+  width: min(90vw, 820px);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.clean-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid #eef1f5;
+  flex-shrink: 0;
+}
+
+.clean-panel-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f3a4e;
+}
+
+.clean-panel-title i {
+  color: #2a5c8a;
+  margin-right: 8px;
+}
+
+.clean-panel-close {
+  background: none;
+  border: none;
+  color: #8da0b2;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.clean-panel-close:hover {
+  background: #f0f4f8;
+  color: #1f3a4e;
+}
+
+.clean-panel-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.clean-panel-info {
+  font-size: 13px;
+  color: #5d7387;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: #f6f9fc;
+  border-radius: 8px;
+}
+
+.clean-panel-section {
+  margin-bottom: 20px;
+}
+
+.clean-panel-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f3a4e;
+  margin-bottom: 10px;
+}
+
+.clean-panel-section-title i {
+  color: #2a5c8a;
+  margin-right: 6px;
+}
+
+/* 预览表格 */
+.clean-preview-wrap {
+  overflow-x: auto;
+  border: 1px solid #e2eaf2;
+  border-radius: 8px;
+}
+
+.clean-preview-wrap table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+}
+
+.clean-preview-wrap th {
+  padding: 8px 10px;
+  border: 1px solid #e2eaf2;
+  background: #f6f9fc;
+  color: #3e5468;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.clean-preview-wrap td {
+  padding: 6px 10px;
+  border: 1px solid #eef1f5;
+  color: #3e5468;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clean-preview-wrap tbody tr:hover {
+  background: #fafcfe;
+}
+
+/* 列角色设置 */
+.clean-column-roles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.clean-column-role-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background 0.12s;
+}
+
+.clean-column-role-row:hover {
+  background: #f6f9fc;
+}
+
+.clean-column-role-row .col-name {
+  flex: 0 0 140px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1f3a4e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clean-column-role-row .col-type-badge {
+  flex: 0 0 70px;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.col-type-badge.num {
+  background: #e3f0fa;
+  color: #1e4b6e;
+}
+
+.col-type-badge.cat {
+  background: #fef3e2;
+  color: #8a6a2a;
+}
+
+.col-type-badge.idx {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+/* 示例值 */
+.clean-column-role-row .col-sample {
+  flex: 1;
+  font-size: 11px;
+  color: #8da0b2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* 角色单选按钮 */
+.clean-column-role-row .role-options {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.role-btn {
+  padding: 3px 10px;
+  font-size: 11px;
+  border: 1px solid #d6e0ea;
+  background: #f9fbfd;
+  color: #5d7387;
+  cursor: pointer;
+  transition: all 0.12s;
+  border-radius: 0;
+}
+
+.role-btn:first-of-type {
+  border-radius: 12px 0 0 12px;
+}
+
+.role-btn:last-of-type {
+  border-radius: 0 12px 12px 0;
+}
+
+.role-btn:not(:last-of-type) {
+  border-right: none;
+}
+
+.role-btn.active {
+  color: #fff;
+  border-color: transparent;
+}
+
+.role-btn.active.num {
+  background: #2a5c8a;
+}
+
+.role-btn.active.cat {
+  background: #c4902a;
+}
+
+.role-btn.active.idx {
+  background: #388e3c;
+}
+
+.role-btn:not(.active):hover {
+  background: #eef4fa;
+}
+
+/* 面板底部 */
+.clean-panel-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 24px;
+  border-top: 1px solid #eef1f5;
+  flex-shrink: 0;
+}
+
+.clean-panel-footer .btn-primary {
+  padding: 9px 22px;
+  font-size: 13px;
+}
+
+/* 清洗中加载状态 */
+#btnApplyClean.loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* 数据集卡片的清洗按钮 */
+.btn-clean-data {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  font-size: 11px;
+  background: #e8f5e9;
+  border: 1px solid #b8d8b8;
+  color: #2e7d32;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.btn-clean-data:hover {
+  background: #d0ead0;
+}

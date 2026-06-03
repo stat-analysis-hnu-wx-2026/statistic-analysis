@@ -127,6 +127,34 @@
 
   <!--BUILD_PYTHON-->
 
+  <!-- 数据清洗面板 -->
+  <div id="cleanPanel" class="clean-panel-overlay" style="display:none;">
+    <div class="clean-panel">
+      <div class="clean-panel-header">
+        <div class="clean-panel-title"><i class="fas fa-broom"></i> 数据清洗</div>
+        <button class="clean-panel-close" onclick="closeCleanPanel()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="clean-panel-body">
+        <div class="clean-panel-info" id="cleanPanelInfo"></div>
+        <div class="clean-panel-section">
+          <div class="clean-panel-section-title"><i class="fas fa-table"></i> 数据预览（前5行）</div>
+          <div class="clean-preview-wrap" id="cleanPreview"></div>
+        </div>
+        <div class="clean-panel-section">
+          <div class="clean-panel-section-title"><i class="fas fa-tags"></i> 列角色设置</div>
+          <p class="param-hint" style="margin:0 0 8px 4px;">为每一列指定角色：数值列会做清洗和缺失填补，索引列和分类列保持原样。</p>
+          <div class="clean-column-roles" id="cleanColumnRoles"></div>
+        </div>
+      </div>
+      <div class="clean-panel-footer">
+        <button class="btn-secondary" onclick="closeCleanPanel()">取消</button>
+        <button class="btn-primary" id="btnApplyClean" onclick="applyCleaning()">
+          <i class="fas fa-check"></i> 确认清洗
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="js/navigation.js"></script>
   <script src="js/boot.js"></script>
   <script src="js/bridge.js"></script>

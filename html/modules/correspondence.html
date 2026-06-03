@@ -1,9 +1,126 @@
 <div class="module-content" id="correspondence">
-  <div class="page-header">...</div>
-  <div class="redirect-placeholder">
-    <p>当前对应分析为独立页面</p>
-    <a href="https://ttrerubpyinbw.ok.kimi.link" target="_blank" class="btn-primary">
-      打开对应分析页面 <i class="fas fa-external-link-alt"></i>
-    </a>
+
+  <div class="page-header">
+    <div class="header-left">
+      <h1>对应分析 · Correspondence Analysis</h1>
+      <div class="breadcrumb">
+        <i class="fas fa-folder-open"></i> 降维 / 对应分析
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary btn-run" data-module="Correspondence" data-func="analyze" disabled>
+        <i class="fas fa-play"></i> 运行分析
+      </button>
+    </div>
   </div>
+
+  <!-- 变量选择 -->
+  <div class="param-card">
+    <div class="param-title"><i class="fas fa-sliders-h" style="color:#2a5c8a;"></i> 变量选择</div>
+    <p class="param-hint" style="margin:0 0 12px 4px;">选择行变量和列变量，构建列联表进行对应分析</p>
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+      <button class="btn-load-columns btn-secondary" data-module="Correspondence" data-func="get_columns" style="padding:6px 14px;font-size:12px;">
+        <i class="fas fa-sync"></i> 加载列名
+      </button>
+      <span class="load-status" style="font-size:11px;color:#738fa0;"></span>
+    </div>
+    <div class="param-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="param-field">
+        <label>行变量 (Row)</label>
+        <select class="fake-select-control" data-param="row_var" style="width:100%;">
+          <option value="" disabled selected>请先点击「加载列名」</option>
+        </select>
+      </div>
+      <div class="param-field">
+        <label>列变量 (Column)</label>
+        <select class="fake-select-control" data-param="col_var" style="width:100%;">
+          <option value="" disabled selected>请先点击「加载列名」</option>
+        </select>
+      </div>
+    </div>
+    <div class="param-grid" style="grid-template-columns:1fr; margin-top:12px;">
+      <div class="param-field">
+        <label>显示维度数</label>
+        <input type="number" data-param="n_dims" min="1" max="20" value="2"
+               style="background:#f9fbfd;border:1px solid #d6e0ea;border-radius:40px;padding:10px 18px;font-size:14px;width:140px;text-align:center;">
+      </div>
+    </div>
+    <p style="color:#738fa0; margin-top:10px; font-size:12px;">请先在左侧上传数据文件，然后点击「加载列名」获取变量列表。</p>
+  </div>
+
+  <!-- 指标行 -->
+  <div class="metrics-row">
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-hashtag"></i> 行类别数</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-list"></i> 列类别数</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-chart-pie"></i> 总惯性</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-chart-line"></i> 前2维解释率</div>
+      <div class="metric-value">--</div>
+    </div>
+  </div>
+
+  <!-- 图表区域 -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <h3><i class="fas fa-chart-bar" style="margin-right:8px; color:#1e4b6e;"></i>对称图 · 碎石图 · 贡献图</h3>
+    </div>
+    <div class="chart-container" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+    </div>
+    <pre class="py-output" style="margin:12px 8px 0;padding:10px 12px;background:#f6f9fc;border:1px solid #e2eaf2;border-radius:8px;color:#3e5468;font-size:12px;white-space:pre-wrap;">等待运行...</pre>
+  </div>
+
+  <!-- 表格区域 -->
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> 惯性分解表</span>
+      <span class="badge">奇异值与解释率</span>
+    </div>
+    <table class="simple-table">
+      <thead><tr><th>维度</th><th>奇异值</th><th>惯性</th><th>解释率</th><th>累积解释率</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> 行坐标</span>
+      <span class="badge">含贡献和Cos²</span>
+    </div>
+    <table class="simple-table">
+      <thead><tr><th>类别</th><th>Dim 1</th><th>Dim 2</th><th>贡献</th><th>Cos²</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> 列坐标</span>
+      <span class="badge">含贡献和Cos²</span>
+    </div>
+    <table class="simple-table">
+      <thead><tr><th>类别</th><th>Dim 1</th><th>Dim 2</th><th>贡献</th><th>Cos²</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> 列联表</span>
+      <span class="badge">观测频数</span>
+    </div>
+    <table class="simple-table">
+      <thead><tr><th>行\列</th><th>—</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
 </div>

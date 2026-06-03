@@ -9,6 +9,21 @@ from sklearn.cross_decomposition import CCA
 from sklearn.preprocessing import StandardScaler
 
 
+def get_columns(options):
+    """获取数值列名列表，供前端选择变量"""
+    if not isinstance(options, dict):
+        options = options.to_py()
+    data_path = options.get('data_path')
+    if not data_path:
+        return {"error": "请先在左侧上传数据文件"}
+    try:
+        df = pd.read_csv(data_path)
+    except Exception as e:
+        return {"error": f"读取数据失败: {e}"}
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    return {"columns": numeric_cols}
+
+
 def analyze(options):
     """
     典型相关分析 (CCA) 模块 - 完整版
@@ -34,13 +49,30 @@ def analyze(options):
     if len(numeric_cols) < 2:
         return {"error": "需要至少两列数值型变量才能进行典型相关分析"}
 
-    # 5. 自动分组：前一半列作为 X，后一半列作为 Y
-    n = len(numeric_cols) // 2
-    X_cols = numeric_cols[:n]
-    Y_cols = numeric_cols[n:]
+    # 5. 获取用户指定的 X/Y 列名（来自前端双选框）
+    x_cols_param = options.get('x_cols', None)
+    y_cols_param = options.get('y_cols', None)
 
-    if len(X_cols) == 0 or len(Y_cols) == 0:
-        return {"error": "分组后 X 或 Y 组为空，请检查数据列数"}
+    if x_cols_param and y_cols_param:
+        # 用户指定了分组
+        if hasattr(x_cols_param, 'to_py'):
+            x_cols_param = x_cols_param.to_py()
+        if hasattr(y_cols_param, 'to_py'):
+            y_cols_param = y_cols_param.to_py()
+
+        X_cols = [c for c in numeric_cols if c in x_cols_param]
+        Y_cols = [c for c in numeric_cols if c in y_cols_param]
+
+        if len(X_cols) == 0 or len(Y_cols) == 0:
+            return {"error": "请至少选择一个X变量和一个Y变量"}
+    else:
+        # 兼容旧行为：自动对半分
+        n = len(numeric_cols) // 2
+        X_cols = numeric_cols[:n]
+        Y_cols = numeric_cols[n:]
+
+        if len(X_cols) == 0 or len(Y_cols) == 0:
+            return {"error": "分组后 X 或 Y 组为空，请检查数据列数"}
 
     # 6. 样本量校验
     n_samples = len(df)
@@ -137,8 +169,11 @@ def analyze(options):
 
     # 图2：载荷热力图（合并 X 和 Y）
     fig2, ax2 = plt.subplots(figsize=(10, 6))
-    all_loadings = np.vstack([np.array(x_loadings), np.array(y_loadings)])
-    all_labels = [f'X_{i + 1}' for i in range(n_vars_x)] + [f'Y_{i + 1}' for i in range(n_vars_y)]
+    # 转置: (n_components, n_vars) → (n_vars, n_components)，使每一行是一个变量
+    x_load_T = np.array(x_loadings).T  # (n_vars_x, n_components)
+    y_load_T = np.array(y_loadings).T  # (n_vars_y, n_components)
+    all_loadings = np.vstack([x_load_T, y_load_T])  # (n_vars_x + n_vars_y, n_components)
+    all_labels = X_cols + Y_cols
     im = ax2.imshow(all_loadings, cmap='RdBu_r', aspect='auto', vmin=-1, vmax=1)
     ax2.set_xticks(range(n_components))
     ax2.set_xticklabels([f'PC{i + 1}' for i in range(n_components)])
@@ -191,13 +226,13 @@ def analyze(options):
     # X 权重
     axes[0].bar(range(len(X_cols)), x_weights[:, 0], color='steelblue')
     axes[0].set_xticks(range(len(X_cols)))
-    axes[0].set_xticklabels([f'X{i + 1}' for i in range(len(X_cols))])
+    axes[0].set_xticklabels(X_cols, fontsize=9)
     axes[0].set_title('X 组典型权重 (第一对)')
     axes[0].set_ylabel('权重')
     # Y 权重
     axes[1].bar(range(len(Y_cols)), y_weights[:, 0], color='coral')
     axes[1].set_xticks(range(len(Y_cols)))
-    axes[1].set_xticklabels([f'Y{i + 1}' for i in range(len(Y_cols))])
+    axes[1].set_xticklabels(Y_cols, fontsize=9)
     axes[1].set_title('Y 组典型权重 (第一对)')
     axes[1].set_ylabel('权重')
     fig5.tight_layout()
@@ -220,24 +255,24 @@ def analyze(options):
 
     # 表2：典型权重
     weight_table_x = []
-    for i in range(len(X_cols)):
-        row = [f'X{i + 1}'] + [f'{x_weights[i, j]:.4f}' for j in range(n_components)]
+    for i, col_name in enumerate(X_cols):
+        row = [col_name] + [f'{x_weights[i, j]:.4f}' for j in range(n_components)]
         weight_table_x.append(row)
 
     weight_table_y = []
-    for i in range(len(Y_cols)):
-        row = [f'Y{i + 1}'] + [f'{y_weights[i, j]:.4f}' for j in range(n_components)]
+    for i, col_name in enumerate(Y_cols):
+        row = [col_name] + [f'{y_weights[i, j]:.4f}' for j in range(n_components)]
         weight_table_y.append(row)
 
     # 表3：结构载荷
     loading_table_x = []
-    for i in range(len(X_cols)):
-        row = [f'X{i + 1}'] + [f'{x_loadings[j][i]:.4f}' for j in range(n_components)]
+    for i, col_name in enumerate(X_cols):
+        row = [col_name] + [f'{x_loadings[j][i]:.4f}' for j in range(n_components)]
         loading_table_x.append(row)
 
     loading_table_y = []
-    for i in range(len(Y_cols)):
-        row = [f'Y{i + 1}'] + [f'{y_loadings[j][i]:.4f}' for j in range(n_components)]
+    for i, col_name in enumerate(Y_cols):
+        row = [col_name] + [f'{y_loadings[j][i]:.4f}' for j in range(n_components)]
         loading_table_y.append(row)
 
     # 表4：典型变量得分

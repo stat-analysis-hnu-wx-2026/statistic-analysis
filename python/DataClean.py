@@ -128,6 +128,184 @@ def clean_dataframe(
     return result
 
 
+def preview_data(options):
+    """快速返回数据预览信息（只读前 1000 行）
+
+    接受参数:
+        data_path: CSV 文件路径
+
+    返回:
+        columns: 列名列表
+        dtypes: {列名: 类型字符串}
+        sample: 前 5 行数据（字符串二维数组）
+        n_rows: 总行数
+        suggested_roles: {列名: "index"|"numeric"|"categorical"}
+    """
+    if not isinstance(options, dict):
+        options = options.to_py()
+    data_path = options.get('data_path')
+    if not data_path:
+        return {"error": "未指定数据路径"}
+
+    import csv
+
+    # 编码检测 + CSV 行数
+    columns = None
+    n_rows = 0
+    detected_enc = None
+    for enc in ("utf-8", "utf-8-sig", "gbk", "gb18030"):
+        try:
+            with open(data_path, encoding=enc, newline='') as f:
+                reader = csv.reader(f)
+                columns = next(reader)
+                n_rows = sum(1 for _ in reader)
+            detected_enc = enc
+            break
+        except Exception:
+            continue
+
+    if columns is None:
+        return {"error": f"无法读取文件: {data_path}"}
+    if n_rows == 0:
+        return {"error": "空文件"}
+
+    # pandas 读前 1000 行
+    df_sample = pd.read_csv(data_path, nrows=min(1000, n_rows + 1), encoding=detected_enc)
+
+    # 前 5 行预览
+    sample = []
+    for _, row in df_sample.head(5).iterrows():
+        sample.append(["" if pd.isna(v) else str(v) for v in row])
+
+    # 类型推断 + 角色建议
+    actual_columns = df_sample.columns.tolist()
+    dtypes = {}
+    suggested_roles = {}
+    for i, col in enumerate(actual_columns):
+        dtype_str = str(df_sample[col].dtype)
+        dtypes[col] = dtype_str
+        if i == 0:
+            suggested_roles[col] = "index"
+        elif pd.api.types.is_numeric_dtype(df_sample[col]):
+            suggested_roles[col] = "numeric"
+        else:
+            suggested_roles[col] = "categorical"
+
+    # 补上 csv reader 发现但 pd.read_csv(nrows) 未发现的列
+    for col in columns:
+        if col not in dtypes:
+            dtypes[col] = "unknown"
+            suggested_roles[col] = "categorical" if columns.index(col) > 0 else "index"
+
+    return {
+        "columns": columns,
+        "dtypes": dtypes,
+        "sample": sample,
+        "n_rows": n_rows,
+        "suggested_roles": suggested_roles,
+    }
+
+
+def manual_clean(options):
+    """根据用户指定的列角色清洗数据
+
+    接受参数:
+        data_path: 原始 CSV 路径
+        index_col: 索引列名（保留原样，不做数值处理）
+        numeric_cols: 数值列名列表（清洗 + 均值填补）
+        categorical_cols: 分类列名列表（保留原样）
+
+    返回:
+        path: 清洗后文件路径
+        columns: 总列数
+        numeric_columns: 数值列数
+        categorical_columns: 分类列数
+        rows: 行数
+    """
+    if not isinstance(options, dict):
+        options = options.to_py()
+
+    data_path = options.get('data_path')
+    index_col = options.get('index_col', None)
+    numeric_cols = options.get('numeric_cols', [])
+    categorical_cols = options.get('categorical_cols', [])
+
+    if hasattr(numeric_cols, 'to_py'):
+        numeric_cols = numeric_cols.to_py()
+    if hasattr(categorical_cols, 'to_py'):
+        categorical_cols = categorical_cols.to_py()
+    if isinstance(index_col, list):
+        index_col = index_col[0] if index_col else None
+
+    if not data_path:
+        return {"error": "未指定数据路径"}
+
+    df = _read_csv(data_path)
+    if df is None:
+        return {"error": f"无法读取文件: {data_path}"}
+
+    # 分离索引列
+    index_df = None
+    if index_col and index_col in df.columns:
+        index_df = df[[index_col]]
+
+    # 数值列清洗
+    valid_numeric = [c for c in numeric_cols if c in df.columns]
+    numeric_df = pd.DataFrame(index=df.index)
+    for col in valid_numeric:
+        numeric_df[col] = _clean_series_numeric(df[col])
+
+    # 均值填补（只对有实际数值的列）
+    if not numeric_df.empty and numeric_df.shape[1] > 0:
+        imputer = SimpleImputer(strategy='mean')
+        numeric_array = imputer.fit_transform(numeric_df)
+        numeric_df = pd.DataFrame(numeric_array, columns=numeric_df.columns, index=numeric_df.index)
+
+    # 分类列保留原样
+    valid_cat = [c for c in categorical_cols if c in df.columns]
+    cat_df = df[valid_cat] if valid_cat else pd.DataFrame(index=df.index)
+
+    # 重组
+    parts = []
+    if index_df is not None:
+        parts.append(index_df)
+    if not numeric_df.empty:
+        parts.append(numeric_df)
+    if not cat_df.empty:
+        parts.append(cat_df)
+
+    if not parts:
+        return {"error": "没有选择任何列。请至少指定一列为「数值」或「分类」。", "path": data_path, "columns": 0, "numeric_columns": 0, "categorical_columns": 0, "rows": len(df)}
+
+    result = pd.concat(parts, axis=1)
+
+    # 写文件
+    output_path = data_path.replace('.csv', '.cleaned.csv')
+    if output_path == data_path:
+        base, ext = os.path.splitext(data_path)
+        output_path = f"{base}.cleaned{ext}"
+
+    result.to_csv(output_path, index=False, encoding="utf-8-sig")
+
+    return {
+        "path": output_path,
+        "columns": len(result.columns),
+        "numeric_columns": len(valid_numeric),
+        "categorical_columns": len(valid_cat),
+        "rows": len(result),
+    }
+
+
+def _read_csv(path):
+    """尝试多种编码读取 CSV"""
+    for enc in ("utf-8", "utf-8-sig", "gbk", "gb18030"):
+        try:
+            return pd.read_csv(path, encoding=enc, sep=None, engine="python")
+        except Exception:
+            continue
+    return None
+
+
 def auto_clean(input_path: str, output_path: str = None) -> str:
     """从 input_path 读 CSV，自动清洗后写入 output_path。
 

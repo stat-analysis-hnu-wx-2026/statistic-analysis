@@ -171,15 +171,42 @@ window.MODULE_HTML = {
     <!-- AHP专用参数 -->
     <div id="ahp-params" class="param-card method-params">
         <div class="param-title">
-            <i class="fas fa-table"></i> AHP参数配置
+            <i class="fas fa-table"></i> AHP判断矩阵设置
         </div>
-        <p class="param-hint" style="margin:0 0 12px 4px;">选择了「层次分析法」时填写下方判断矩阵，留空则自动计算权重</p>
-        <div class="param-grid">
-            <div class="param-field param-field-full">
-                <label>判断矩阵 (JSON格式)</label>
-                <textarea class="fake-select-control" data-param="judgement_matrix" rows="4" placeholder='例如: [[1,3,2], [1/3,1,1/2], [1/2,2,1]]'></textarea>
-                <p class="param-hint">留空则自动计算权重（标准差法）。行/列顺序与指标选择一致</p>
+        <p class="param-hint" style="margin:0 0 12px 4px;">
+            在「评价指标选择」中输入指标名称，然后点击下方「生成矩阵」进行两两比较
+        </p>
+
+        <!-- 隐藏字段，由 collectParams 自动收集 -->
+        <input type="hidden" id="judgement-matrices-data" data-param="judgement_matrices" value="">
+
+        <!-- 矩阵操作工具栏 -->
+        <div class="matrix-toolbar" style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+            <button class="btn-secondary btn-generate-matrix" type="button" style="padding:6px 14px;font-size:12px;">
+                <i class="fas fa-table"></i> 生成矩阵
+            </button>
+            <button class="btn-secondary btn-add-expert" type="button" style="padding:6px 14px;font-size:12px;display:none;">
+                <i class="fas fa-user-plus"></i> 添加专家
+            </button>
+            <span class="matrix-status" style="font-size:11px;color:#738fa0;">请先填写评价指标</span>
+        </div>
+
+        <!-- 标度参考 -->
+        <div class="matrix-scale-ref" style="font-size:11px;color:#5d7387;background:#f6f9fc;border:1px solid #e2eaf2;border-radius:6px;padding:8px 12px;margin-bottom:12px;display:none;line-height:1.6;">
+            <b>AHP 标度参考：</b>
+            1 = 同等重要 &nbsp;|&nbsp; 3 = 稍微重要 &nbsp;|&nbsp; 5 = 明显重要 &nbsp;|&nbsp; 7 = 强烈重要 &nbsp;|&nbsp; 9 = 极端重要
+            <br><span style="color:#999;">（2,4,6,8 为中间值，上三角填整数后自动生成下三角倒数）</span>
+        </div>
+
+        <!-- 矩阵容器——由 JS 动态生成 -->
+        <div class="matrix-container" style="display:none;"></div>
+
+        <!-- 聚合矩阵预览（多位专家时显示） -->
+        <div class="aggregate-matrix-container" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid #e2eaf2;">
+            <div class="param-title" style="margin-top:0;font-size:13px;">
+                <i class="fas fa-layer-group"></i> 聚合结果矩阵（专家几何平均）
             </div>
+            <div class="aggregate-matrix-table" style="margin-top:8px;overflow-x:auto;"></div>
         </div>
     </div>
 
@@ -198,14 +225,8 @@ window.MODULE_HTML = {
                     <option value="gray_relational">灰色关联分析法</option>
                 </select>
             </div>
-            <div class="param-field">
-                <label>权重设置</label>
-                <select class="fake-select-control" data-param="weight_method">
-                    <option value="equal" selected>等权重法</option>
-                    <option value="std">标准差法</option>
-                </select>
-            </div>
         </div>
+        <p class="param-hint" style="grid-column:1/-1;margin:4px 0 0 4px;">权重优先使用 AHP 判断矩阵计算，未填矩阵时自动按标准差法确定。</p>
     </div>
 
     <!-- 通用指标选择 -->
@@ -320,16 +341,46 @@ window.MODULE_HTML = {
 }
 </style>`,
   "canonical": `<div class="module-content" id="cca">
+
+  
+
+
   <div class="page-header">
     <div class="header-left">
       <h1>典型相关分析 · CCA</h1>
       <div class="breadcrumb">
         <i class="fas fa-folder-open"></i> 相关分析 / CCA
       </div>
-      <div class="header-actions">
-        <button class="btn-primary btn-run" data-module="CanonicalCorrelation" data-func="analyze" disabled>
-          <i class="fas fa-play"></i> 运行分析
-        </button>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary btn-run" data-module="CanonicalCorrelation" data-func="analyze" disabled>
+        <i class="fas fa-play"></i> 运行分析
+      </button>
+    </div>
+  </div>
+
+  <!-- 变量选择 -->
+  <div class="param-card">
+    <div class="param-title"><i class="fas fa-sliders-h"></i> 变量选择</div>
+    <p class="param-hint" style="margin:0 0 12px 4px;">选择 X 组和 Y 组的变量，留空则自动将数值列对半分</p>
+    <div class="param-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="param-field">
+        <label>X 组变量</label>
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
+          <button class="btn-load-columns btn-secondary" data-module="CanonicalCorrelation" data-func="get_columns" style="padding:6px 14px;font-size:12px;">
+            <i class="fas fa-sync"></i> 加载列名
+          </button>
+          <span class="load-status" style="font-size:11px;color:#738fa0;"></span>
+        </div>
+        <select multiple class="fake-select-control column-select" data-param="x_cols" size="5" style="width:100%;">
+          <option value="" disabled>请先点击「加载列名」</option>
+        </select>
+      </div>
+      <div class="param-field">
+        <label>Y 组变量</label>
+        <select multiple class="fake-select-control column-select" data-param="y_cols" size="5" style="width:100%;">
+          <option value="" disabled>请先点击「加载列名」</option>
+        </select>
       </div>
     </div>
   </div>
@@ -445,6 +496,36 @@ window.MODULE_HTML = {
     </table>
   </div>
 
+<style>
+/* 变量选择多选框样式覆盖 */
+#cca .column-select {
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 13px;
+  min-width: unset;
+}
+
+#cca .column-select option {
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* 细滚动条 */
+#cca .column-select::-webkit-scrollbar {
+  width: 6px;
+}
+#cca .column-select::-webkit-scrollbar-track {
+  background: #f0f4f8;
+  border-radius: 3px;
+}
+#cca .column-select::-webkit-scrollbar-thumb {
+  background: #c0cfdc;
+  border-radius: 3px;
+}
+#cca .column-select::-webkit-scrollbar-thumb:hover {
+  background: #a0b4c6;
+}
+</style>
 </div>`,
   "clustering": `<div class="module-content active" id="clustering">
   <div class="page-header">
@@ -555,14 +636,132 @@ window.MODULE_HTML = {
 </div>
 `,
   "correspondence": `<div class="module-content" id="correspondence">
-  <div class="page-header">...</div>
-  <div class="redirect-placeholder">
-    <p>当前对应分析为独立页面</p>
-    <a href="https://ttrerubpyinbw.ok.kimi.link" target="_blank" class="btn-primary">
-      打开对应分析页面 <i class="fas fa-external-link-alt"></i>
-    </a>
+
+  <div class="page-header">
+    <div class="header-left">
+      <h1>对应分析 · Correspondence Analysis</h1>
+      <div class="breadcrumb">
+        <i class="fas fa-folder-open"></i> 降维 / 对应分析
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary btn-run" data-module="Correspondence" data-func="analyze" disabled>
+        <i class="fas fa-play"></i> 运行分析
+      </button>
+    </div>
   </div>
-</div>`,
+
+  <!-- 变量选择 -->
+  <div class="param-card">
+    <div class="param-title"><i class="fas fa-sliders-h" style="color:#2a5c8a;"></i> 变量选择</div>
+    <p class="param-hint" style="margin:0 0 12px 4px;">选择行变量和列变量，构建列联表进行对应分析</p>
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+      <button class="btn-load-columns btn-secondary" data-module="Correspondence" data-func="get_columns" style="padding:6px 14px;font-size:12px;">
+        <i class="fas fa-sync"></i> 加载列名
+      </button>
+      <span class="load-status" style="font-size:11px;color:#738fa0;"></span>
+    </div>
+    <div class="param-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="param-field">
+        <label>行变量 (Row)</label>
+        <select class="fake-select-control" data-param="row_var" style="width:100%;">
+          <option value="" disabled selected>请先点击「加载列名」</option>
+        </select>
+      </div>
+      <div class="param-field">
+        <label>列变量 (Column)</label>
+        <select class="fake-select-control" data-param="col_var" style="width:100%;">
+          <option value="" disabled selected>请先点击「加载列名」</option>
+        </select>
+      </div>
+    </div>
+    <div class="param-grid" style="grid-template-columns:1fr; margin-top:12px;">
+      <div class="param-field">
+        <label>显示维度数</label>
+        <input type="number" data-param="n_dims" min="1" max="20" value="2"
+               style="background:#f9fbfd;border:1px solid #d6e0ea;border-radius:40px;padding:10px 18px;font-size:14px;width:140px;text-align:center;">
+      </div>
+    </div>
+    <p style="color:#738fa0; margin-top:10px; font-size:12px;">请先在左侧上传数据文件，然后点击「加载列名」获取变量列表。</p>
+  </div>
+
+  <!-- 指标行 -->
+  <div class="metrics-row">
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-hashtag"></i> 行类别数</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-list"></i> 列类别数</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-chart-pie"></i> 总惯性</div>
+      <div class="metric-value">--</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label"><i class="fas fa-chart-line"></i> 前2维解释率</div>
+      <div class="metric-value">--</div>
+    </div>
+  </div>
+
+  <!-- 图表区域 -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <h3><i class="fas fa-chart-bar" style="margin-right:8px; color:#1e4b6e;"></i>对称图 · 碎石图 · 贡献图</h3>
+    </div>
+    <div class="chart-container" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+    </div>
+    <pre class="py-output" style="margin:12px 8px 0;padding:10px 12px;background:#f6f9fc;border:1px solid #e2eaf2;border-radius:8px;color:#3e5468;font-size:12px;white-space:pre-wrap;">等待运行...</pre>
+  </div>
+
+  <!-- 表格区域 -->
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> 惯性分解表</span>
+      <span class="badge">奇异值与解释率</span>
+    </div>
+    <table class="simple-table">
+      <thead><tr><th>维度</th><th>奇异值</th><th>惯性</th><th>解释率</th><th>累积解释率</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> 行坐标</span>
+      <span class="badge">含贡献和Cos²</span>
+    </div>
+    <table class="simple-table">
+      <thead><tr><th>类别</th><th>Dim 1</th><th>Dim 2</th><th>贡献</th><th>Cos²</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> 列坐标</span>
+      <span class="badge">含贡献和Cos²</span>
+    </div>
+    <table class="simple-table">
+      <thead><tr><th>类别</th><th>Dim 1</th><th>Dim 2</th><th>贡献</th><th>Cos²</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-preview">
+    <div class="preview-header">
+      <span><i class="fas fa-table"></i> 列联表</span>
+      <span class="badge">观测频数</span>
+    </div>
+    <table class="simple-table">
+      <thead><tr><th>行\\列</th><th>—</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+</div>
+`,
   "extended": `<div class="module-content" id="extended">
   <div class="page-header">
     <div class="header-left">
@@ -1242,6 +1441,184 @@ window.MODULE_HTML = {
     <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">result</span>
 
 
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">preview_data</span><span style="color: #F8F8F2">(options):</span>
+<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;快速返回数据预览信息（只读前 1000 行）</span>
+
+<span style="color: #E6DB74">    接受参数:</span>
+<span style="color: #E6DB74">        data_path: CSV 文件路径</span>
+
+<span style="color: #E6DB74">    返回:</span>
+<span style="color: #E6DB74">        columns: 列名列表</span>
+<span style="color: #E6DB74">        dtypes: {列名: 类型字符串}</span>
+<span style="color: #E6DB74">        sample: 前 5 行数据（字符串二维数组）</span>
+<span style="color: #E6DB74">        n_rows: 总行数</span>
+<span style="color: #E6DB74">        suggested_roles: {列名: &quot;index&quot;|&quot;numeric&quot;|&quot;categorical&quot;}</span>
+<span style="color: #E6DB74">    &quot;&quot;&quot;</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">isinstance(options,</span> <span style="color: #F8F8F2">dict):</span>
+        <span style="color: #F8F8F2">options</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_py()</span>
+    <span style="color: #F8F8F2">data_path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;data_path&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">data_path:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;未指定数据路径&quot;</span><span style="color: #F8F8F2">}</span>
+
+    <span style="color: #FF4689">import</span><span style="color: #F8F8F2"> csv</span>
+
+    <span style="color: #959077"># 编码检测 + CSV 行数</span>
+    <span style="color: #F8F8F2">columns</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">None</span>
+    <span style="color: #F8F8F2">n_rows</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">0</span>
+    <span style="color: #F8F8F2">detected_enc</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">None</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">enc</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;utf-8-sig&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;gbk&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;gb18030&quot;</span><span style="color: #F8F8F2">):</span>
+        <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #66D9EF">with</span> <span style="color: #F8F8F2">open(data_path,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">enc,</span> <span style="color: #F8F8F2">newline</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;&#39;</span><span style="color: #F8F8F2">)</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">f:</span>
+                <span style="color: #F8F8F2">reader</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">csv</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">reader(f)</span>
+                <span style="color: #F8F8F2">columns</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">next(reader)</span>
+                <span style="color: #F8F8F2">n_rows</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">sum(</span><span style="color: #AE81FF">1</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">_</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">reader)</span>
+            <span style="color: #F8F8F2">detected_enc</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">enc</span>
+            <span style="color: #66D9EF">break</span>
+        <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #66D9EF">continue</span>
+
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">columns</span> <span style="color: #FF4689">is</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&quot;无法读取文件: {</span><span style="color: #F8F8F2">data_path</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">}</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">n_rows</span> <span style="color: #FF4689">==</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;空文件&quot;</span><span style="color: #F8F8F2">}</span>
+
+    <span style="color: #959077"># pandas 读前 1000 行</span>
+    <span style="color: #F8F8F2">df_sample</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(data_path,</span> <span style="color: #F8F8F2">nrows</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">min(</span><span style="color: #AE81FF">1000</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">n_rows</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">),</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">detected_enc)</span>
+
+    <span style="color: #959077"># 前 5 行预览</span>
+    <span style="color: #F8F8F2">sample</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">_,</span> <span style="color: #F8F8F2">row</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df_sample</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">head(</span><span style="color: #AE81FF">5</span><span style="color: #F8F8F2">)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">iterrows():</span>
+        <span style="color: #F8F8F2">sample</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append([</span><span style="color: #E6DB74">&quot;&quot;</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">isna(v)</span> <span style="color: #66D9EF">else</span> <span style="color: #F8F8F2">str(v)</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">v</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">row])</span>
+
+    <span style="color: #959077"># 类型推断 + 角色建议</span>
+    <span style="color: #F8F8F2">actual_columns</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">df_sample</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">tolist()</span>
+    <span style="color: #F8F8F2">dtypes</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">{}</span>
+    <span style="color: #F8F8F2">suggested_roles</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">{}</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i,</span> <span style="color: #F8F8F2">col</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">enumerate(actual_columns):</span>
+        <span style="color: #F8F8F2">dtype_str</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">str(df_sample[col]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">dtype)</span>
+        <span style="color: #F8F8F2">dtypes[col]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">dtype_str</span>
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">==</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #F8F8F2">suggested_roles[col]</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;index&quot;</span>
+        <span style="color: #66D9EF">elif</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">api</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">types</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">is_numeric_dtype(df_sample[col]):</span>
+            <span style="color: #F8F8F2">suggested_roles[col]</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;numeric&quot;</span>
+        <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #F8F8F2">suggested_roles[col]</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;categorical&quot;</span>
+
+    <span style="color: #959077"># 补上 csv reader 发现但 pd.read_csv(nrows) 未发现的列</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">col</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">columns:</span>
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">col</span> <span style="color: #FF4689">not</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">dtypes:</span>
+            <span style="color: #F8F8F2">dtypes[col]</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;unknown&quot;</span>
+            <span style="color: #F8F8F2">suggested_roles[col]</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&quot;categorical&quot;</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">columns</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">index(col)</span> <span style="color: #FF4689">&gt;</span> <span style="color: #AE81FF">0</span> <span style="color: #66D9EF">else</span> <span style="color: #E6DB74">&quot;index&quot;</span>
+
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
+        <span style="color: #E6DB74">&quot;columns&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">columns,</span>
+        <span style="color: #E6DB74">&quot;dtypes&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">dtypes,</span>
+        <span style="color: #E6DB74">&quot;sample&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">sample,</span>
+        <span style="color: #E6DB74">&quot;n_rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">n_rows,</span>
+        <span style="color: #E6DB74">&quot;suggested_roles&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">suggested_roles,</span>
+    <span style="color: #F8F8F2">}</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">manual_clean</span><span style="color: #F8F8F2">(options):</span>
+<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;根据用户指定的列角色清洗数据</span>
+
+<span style="color: #E6DB74">    接受参数:</span>
+<span style="color: #E6DB74">        data_path: 原始 CSV 路径</span>
+<span style="color: #E6DB74">        index_col: 索引列名（保留原样，不做数值处理）</span>
+<span style="color: #E6DB74">        numeric_cols: 数值列名列表（清洗 + 均值填补）</span>
+<span style="color: #E6DB74">        categorical_cols: 分类列名列表（保留原样）</span>
+
+<span style="color: #E6DB74">    返回:</span>
+<span style="color: #E6DB74">        path: 清洗后文件路径</span>
+<span style="color: #E6DB74">        columns: 总列数</span>
+<span style="color: #E6DB74">        numeric_columns: 数值列数</span>
+<span style="color: #E6DB74">        categorical_columns: 分类列数</span>
+<span style="color: #E6DB74">        rows: 行数</span>
+<span style="color: #E6DB74">    &quot;&quot;&quot;</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">isinstance(options,</span> <span style="color: #F8F8F2">dict):</span>
+        <span style="color: #F8F8F2">options</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_py()</span>
+
+    <span style="color: #F8F8F2">data_path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;data_path&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">index_col</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;index_col&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">numeric_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;numeric_cols&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">[])</span>
+    <span style="color: #F8F8F2">categorical_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;categorical_cols&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">[])</span>
+
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">hasattr(numeric_cols,</span> <span style="color: #E6DB74">&#39;to_py&#39;</span><span style="color: #F8F8F2">):</span>
+        <span style="color: #F8F8F2">numeric_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">numeric_cols</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_py()</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">hasattr(categorical_cols,</span> <span style="color: #E6DB74">&#39;to_py&#39;</span><span style="color: #F8F8F2">):</span>
+        <span style="color: #F8F8F2">categorical_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">categorical_cols</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_py()</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">isinstance(index_col,</span> <span style="color: #F8F8F2">list):</span>
+        <span style="color: #F8F8F2">index_col</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">index_col[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">index_col</span> <span style="color: #66D9EF">else</span> <span style="color: #66D9EF">None</span>
+
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">data_path:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;未指定数据路径&quot;</span><span style="color: #F8F8F2">}</span>
+
+    <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_read_csv(data_path)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">is</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&quot;无法读取文件: {</span><span style="color: #F8F8F2">data_path</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">}</span>
+
+    <span style="color: #959077"># 分离索引列</span>
+    <span style="color: #F8F8F2">index_df</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">None</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">index_col</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">index_col</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns:</span>
+        <span style="color: #F8F8F2">index_df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">df[[index_col]]</span>
+
+    <span style="color: #959077"># 数值列清洗</span>
+    <span style="color: #F8F8F2">valid_numeric</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[c</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">c</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">numeric_cols</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">c</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns]</span>
+    <span style="color: #F8F8F2">numeric_df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame(index</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">index)</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">col</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">valid_numeric:</span>
+        <span style="color: #F8F8F2">numeric_df[col]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">_clean_series_numeric(df[col])</span>
+
+    <span style="color: #959077"># 均值填补（只对有实际数值的列）</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">numeric_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">empty</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">numeric_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">shape[</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]</span> <span style="color: #FF4689">&gt;</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">imputer</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">SimpleImputer(strategy</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;mean&#39;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">numeric_array</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">imputer</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">fit_transform(numeric_df)</span>
+        <span style="color: #F8F8F2">numeric_df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame(numeric_array,</span> <span style="color: #F8F8F2">columns</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">numeric_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns,</span> <span style="color: #F8F8F2">index</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">numeric_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">index)</span>
+
+    <span style="color: #959077"># 分类列保留原样</span>
+    <span style="color: #F8F8F2">valid_cat</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[c</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">c</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">categorical_cols</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">c</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns]</span>
+    <span style="color: #F8F8F2">cat_df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">df[valid_cat]</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">valid_cat</span> <span style="color: #66D9EF">else</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">DataFrame(index</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">index)</span>
+
+    <span style="color: #959077"># 重组</span>
+    <span style="color: #F8F8F2">parts</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">index_df</span> <span style="color: #FF4689">is</span> <span style="color: #FF4689">not</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">parts</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(index_df)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">numeric_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">empty:</span>
+        <span style="color: #F8F8F2">parts</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(numeric_df)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">cat_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">empty:</span>
+        <span style="color: #F8F8F2">parts</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(cat_df)</span>
+
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">parts:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;没有选择任何列。请至少指定一列为「数值」或「分类」。&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;path&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">data_path,</span> <span style="color: #E6DB74">&quot;columns&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;numeric_columns&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;categorical_columns&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">len(df)}</span>
+
+    <span style="color: #F8F8F2">result</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">concat(parts,</span> <span style="color: #F8F8F2">axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span>
+
+    <span style="color: #959077"># 写文件</span>
+    <span style="color: #F8F8F2">output_path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">data_path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">replace(</span><span style="color: #E6DB74">&#39;.csv&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;.cleaned.csv&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">output_path</span> <span style="color: #FF4689">==</span> <span style="color: #F8F8F2">data_path:</span>
+        <span style="color: #F8F8F2">base,</span> <span style="color: #F8F8F2">ext</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">os</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">path</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">splitext(data_path)</span>
+        <span style="color: #F8F8F2">output_path</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">f&quot;{</span><span style="color: #F8F8F2">base</span><span style="color: #E6DB74">}.cleaned{</span><span style="color: #F8F8F2">ext</span><span style="color: #E6DB74">}&quot;</span>
+
+    <span style="color: #F8F8F2">result</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_csv(output_path,</span> <span style="color: #F8F8F2">index</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">False</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;utf-8-sig&quot;</span><span style="color: #F8F8F2">)</span>
+
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
+        <span style="color: #E6DB74">&quot;path&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">output_path,</span>
+        <span style="color: #E6DB74">&quot;columns&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">len(result</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns),</span>
+        <span style="color: #E6DB74">&quot;numeric_columns&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">len(valid_numeric),</span>
+        <span style="color: #E6DB74">&quot;categorical_columns&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">len(valid_cat),</span>
+        <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">len(result),</span>
+    <span style="color: #F8F8F2">}</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">_read_csv</span><span style="color: #F8F8F2">(path):</span>
+<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;尝试多种编码读取 CSV&quot;&quot;&quot;</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">enc</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">(</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;utf-8-sig&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;gbk&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;gb18030&quot;</span><span style="color: #F8F8F2">):</span>
+        <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(path,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">enc,</span> <span style="color: #F8F8F2">sep</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">None</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">engine</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;python&quot;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #66D9EF">continue</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #66D9EF">None</span>
+
+
 <span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">auto_clean</span><span style="color: #F8F8F2">(input_path:</span> <span style="color: #F8F8F2">str,</span> <span style="color: #F8F8F2">output_path:</span> <span style="color: #F8F8F2">str</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">-&gt;</span> <span style="color: #F8F8F2">str:</span>
 <span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;从 input_path 读 CSV，自动清洗后写入 output_path。</span>
 
@@ -1284,6 +1661,21 @@ window.MODULE_HTML = {
 <span style="color: #FF4689">from</span><span style="color: #F8F8F2"> sklearn.preprocessing </span><span style="color: #FF4689">import</span> <span style="color: #F8F8F2">StandardScaler</span>
 
 
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">get_columns</span><span style="color: #F8F8F2">(options):</span>
+<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;获取数值列名列表，供前端选择变量&quot;&quot;&quot;</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">isinstance(options,</span> <span style="color: #F8F8F2">dict):</span>
+        <span style="color: #F8F8F2">options</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_py()</span>
+    <span style="color: #F8F8F2">data_path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;data_path&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">data_path:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;请先在左侧上传数据文件&quot;</span><span style="color: #F8F8F2">}</span>
+    <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(data_path)</span>
+    <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">e:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&quot;读取数据失败: {</span><span style="color: #F8F8F2">e</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">}</span>
+    <span style="color: #F8F8F2">numeric_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">select_dtypes(include</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">[np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">number])</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">tolist()</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;columns&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">numeric_cols}</span>
+
+
 <span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">analyze</span><span style="color: #F8F8F2">(options):</span>
 <span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;</span>
 <span style="color: #E6DB74">    典型相关分析 (CCA) 模块 - 完整版</span>
@@ -1309,13 +1701,30 @@ window.MODULE_HTML = {
     <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">len(numeric_cols)</span> <span style="color: #FF4689">&lt;</span> <span style="color: #AE81FF">2</span><span style="color: #F8F8F2">:</span>
         <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;需要至少两列数值型变量才能进行典型相关分析&quot;</span><span style="color: #F8F8F2">}</span>
 
-    <span style="color: #959077"># 5. 自动分组：前一半列作为 X，后一半列作为 Y</span>
-    <span style="color: #F8F8F2">n</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">len(numeric_cols)</span> <span style="color: #FF4689">//</span> <span style="color: #AE81FF">2</span>
-    <span style="color: #F8F8F2">X_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">numeric_cols[:n]</span>
-    <span style="color: #F8F8F2">Y_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">numeric_cols[n:]</span>
+    <span style="color: #959077"># 5. 获取用户指定的 X/Y 列名（来自前端双选框）</span>
+    <span style="color: #F8F8F2">x_cols_param</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;x_cols&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">y_cols_param</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;y_cols&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span>
 
-    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">len(X_cols)</span> <span style="color: #FF4689">==</span> <span style="color: #AE81FF">0</span> <span style="color: #FF4689">or</span> <span style="color: #F8F8F2">len(Y_cols)</span> <span style="color: #FF4689">==</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;分组后 X 或 Y 组为空，请检查数据列数&quot;</span><span style="color: #F8F8F2">}</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">x_cols_param</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">y_cols_param:</span>
+        <span style="color: #959077"># 用户指定了分组</span>
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">hasattr(x_cols_param,</span> <span style="color: #E6DB74">&#39;to_py&#39;</span><span style="color: #F8F8F2">):</span>
+            <span style="color: #F8F8F2">x_cols_param</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">x_cols_param</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_py()</span>
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">hasattr(y_cols_param,</span> <span style="color: #E6DB74">&#39;to_py&#39;</span><span style="color: #F8F8F2">):</span>
+            <span style="color: #F8F8F2">y_cols_param</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">y_cols_param</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_py()</span>
+
+        <span style="color: #F8F8F2">X_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[c</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">c</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">numeric_cols</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">c</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">x_cols_param]</span>
+        <span style="color: #F8F8F2">Y_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[c</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">c</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">numeric_cols</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">c</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">y_cols_param]</span>
+
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">len(X_cols)</span> <span style="color: #FF4689">==</span> <span style="color: #AE81FF">0</span> <span style="color: #FF4689">or</span> <span style="color: #F8F8F2">len(Y_cols)</span> <span style="color: #FF4689">==</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;请至少选择一个X变量和一个Y变量&quot;</span><span style="color: #F8F8F2">}</span>
+    <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #959077"># 兼容旧行为：自动对半分</span>
+        <span style="color: #F8F8F2">n</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">len(numeric_cols)</span> <span style="color: #FF4689">//</span> <span style="color: #AE81FF">2</span>
+        <span style="color: #F8F8F2">X_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">numeric_cols[:n]</span>
+        <span style="color: #F8F8F2">Y_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">numeric_cols[n:]</span>
+
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">len(X_cols)</span> <span style="color: #FF4689">==</span> <span style="color: #AE81FF">0</span> <span style="color: #FF4689">or</span> <span style="color: #F8F8F2">len(Y_cols)</span> <span style="color: #FF4689">==</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;分组后 X 或 Y 组为空，请检查数据列数&quot;</span><span style="color: #F8F8F2">}</span>
 
     <span style="color: #959077"># 6. 样本量校验</span>
     <span style="color: #F8F8F2">n_samples</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">len(df)</span>
@@ -1412,8 +1821,11 @@ window.MODULE_HTML = {
 
     <span style="color: #959077"># 图2：载荷热力图（合并 X 和 Y）</span>
     <span style="color: #F8F8F2">fig2,</span> <span style="color: #F8F8F2">ax2</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">subplots(figsize</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">(</span><span style="color: #AE81FF">10</span><span style="color: #F8F8F2">,</span> <span style="color: #AE81FF">6</span><span style="color: #F8F8F2">))</span>
-    <span style="color: #F8F8F2">all_loadings</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">vstack([np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">array(x_loadings),</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">array(y_loadings)])</span>
-    <span style="color: #F8F8F2">all_labels</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&#39;X_{</span><span style="color: #F8F8F2">i </span><span style="color: #FF4689">+</span><span style="color: #F8F8F2"> </span><span style="color: #AE81FF">1</span><span style="color: #E6DB74">}&#39;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_vars_x)]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&#39;Y_{</span><span style="color: #F8F8F2">i </span><span style="color: #FF4689">+</span><span style="color: #F8F8F2"> </span><span style="color: #AE81FF">1</span><span style="color: #E6DB74">}&#39;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_vars_y)]</span>
+    <span style="color: #959077"># 转置: (n_components, n_vars) → (n_vars, n_components)，使每一行是一个变量</span>
+    <span style="color: #F8F8F2">x_load_T</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">array(x_loadings)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">T</span>  <span style="color: #959077"># (n_vars_x, n_components)</span>
+    <span style="color: #F8F8F2">y_load_T</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">array(y_loadings)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">T</span>  <span style="color: #959077"># (n_vars_y, n_components)</span>
+    <span style="color: #F8F8F2">all_loadings</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">vstack([x_load_T,</span> <span style="color: #F8F8F2">y_load_T])</span>  <span style="color: #959077"># (n_vars_x + n_vars_y, n_components)</span>
+    <span style="color: #F8F8F2">all_labels</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">X_cols</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">Y_cols</span>
     <span style="color: #F8F8F2">im</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">ax2</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">imshow(all_loadings,</span> <span style="color: #F8F8F2">cmap</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;RdBu_r&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">aspect</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;auto&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">vmin</span><span style="color: #FF4689">=-</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">vmax</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span>
     <span style="color: #F8F8F2">ax2</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xticks(range(n_components))</span>
     <span style="color: #F8F8F2">ax2</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xticklabels([</span><span style="color: #E6DB74">f&#39;PC{</span><span style="color: #F8F8F2">i </span><span style="color: #FF4689">+</span><span style="color: #F8F8F2"> </span><span style="color: #AE81FF">1</span><span style="color: #E6DB74">}&#39;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_components)])</span>
@@ -1466,13 +1878,13 @@ window.MODULE_HTML = {
     <span style="color: #959077"># X 权重</span>
     <span style="color: #F8F8F2">axes[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">bar(range(len(X_cols)),</span> <span style="color: #F8F8F2">x_weights[:,</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">color</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;steelblue&#39;</span><span style="color: #F8F8F2">)</span>
     <span style="color: #F8F8F2">axes[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xticks(range(len(X_cols)))</span>
-    <span style="color: #F8F8F2">axes[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xticklabels([</span><span style="color: #E6DB74">f&#39;X{</span><span style="color: #F8F8F2">i </span><span style="color: #FF4689">+</span><span style="color: #F8F8F2"> </span><span style="color: #AE81FF">1</span><span style="color: #E6DB74">}&#39;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(len(X_cols))])</span>
+    <span style="color: #F8F8F2">axes[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xticklabels(X_cols,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">9</span><span style="color: #F8F8F2">)</span>
     <span style="color: #F8F8F2">axes[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_title(</span><span style="color: #E6DB74">&#39;X 组典型权重 (第一对)&#39;</span><span style="color: #F8F8F2">)</span>
     <span style="color: #F8F8F2">axes[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_ylabel(</span><span style="color: #E6DB74">&#39;权重&#39;</span><span style="color: #F8F8F2">)</span>
     <span style="color: #959077"># Y 权重</span>
     <span style="color: #F8F8F2">axes[</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">bar(range(len(Y_cols)),</span> <span style="color: #F8F8F2">y_weights[:,</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">color</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;coral&#39;</span><span style="color: #F8F8F2">)</span>
     <span style="color: #F8F8F2">axes[</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xticks(range(len(Y_cols)))</span>
-    <span style="color: #F8F8F2">axes[</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xticklabels([</span><span style="color: #E6DB74">f&#39;Y{</span><span style="color: #F8F8F2">i </span><span style="color: #FF4689">+</span><span style="color: #F8F8F2"> </span><span style="color: #AE81FF">1</span><span style="color: #E6DB74">}&#39;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(len(Y_cols))])</span>
+    <span style="color: #F8F8F2">axes[</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xticklabels(Y_cols,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">9</span><span style="color: #F8F8F2">)</span>
     <span style="color: #F8F8F2">axes[</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_title(</span><span style="color: #E6DB74">&#39;Y 组典型权重 (第一对)&#39;</span><span style="color: #F8F8F2">)</span>
     <span style="color: #F8F8F2">axes[</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_ylabel(</span><span style="color: #E6DB74">&#39;权重&#39;</span><span style="color: #F8F8F2">)</span>
     <span style="color: #F8F8F2">fig5</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">tight_layout()</span>
@@ -1495,24 +1907,24 @@ window.MODULE_HTML = {
 
     <span style="color: #959077"># 表2：典型权重</span>
     <span style="color: #F8F8F2">weight_table_x</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
-    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(len(X_cols)):</span>
-        <span style="color: #F8F8F2">row</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&#39;X{</span><span style="color: #F8F8F2">i </span><span style="color: #FF4689">+</span><span style="color: #F8F8F2"> </span><span style="color: #AE81FF">1</span><span style="color: #E6DB74">}&#39;</span><span style="color: #F8F8F2">]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">x_weights[i, j]</span><span style="color: #E6DB74">:.4f}&#39;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">j</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_components)]</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i,</span> <span style="color: #F8F8F2">col_name</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">enumerate(X_cols):</span>
+        <span style="color: #F8F8F2">row</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[col_name]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">x_weights[i, j]</span><span style="color: #E6DB74">:.4f}&#39;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">j</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_components)]</span>
         <span style="color: #F8F8F2">weight_table_x</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(row)</span>
 
     <span style="color: #F8F8F2">weight_table_y</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
-    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(len(Y_cols)):</span>
-        <span style="color: #F8F8F2">row</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&#39;Y{</span><span style="color: #F8F8F2">i </span><span style="color: #FF4689">+</span><span style="color: #F8F8F2"> </span><span style="color: #AE81FF">1</span><span style="color: #E6DB74">}&#39;</span><span style="color: #F8F8F2">]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">y_weights[i, j]</span><span style="color: #E6DB74">:.4f}&#39;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">j</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_components)]</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i,</span> <span style="color: #F8F8F2">col_name</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">enumerate(Y_cols):</span>
+        <span style="color: #F8F8F2">row</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[col_name]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">y_weights[i, j]</span><span style="color: #E6DB74">:.4f}&#39;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">j</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_components)]</span>
         <span style="color: #F8F8F2">weight_table_y</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(row)</span>
 
     <span style="color: #959077"># 表3：结构载荷</span>
     <span style="color: #F8F8F2">loading_table_x</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
-    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(len(X_cols)):</span>
-        <span style="color: #F8F8F2">row</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&#39;X{</span><span style="color: #F8F8F2">i </span><span style="color: #FF4689">+</span><span style="color: #F8F8F2"> </span><span style="color: #AE81FF">1</span><span style="color: #E6DB74">}&#39;</span><span style="color: #F8F8F2">]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">x_loadings[j][i]</span><span style="color: #E6DB74">:.4f}&#39;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">j</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_components)]</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i,</span> <span style="color: #F8F8F2">col_name</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">enumerate(X_cols):</span>
+        <span style="color: #F8F8F2">row</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[col_name]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">x_loadings[j][i]</span><span style="color: #E6DB74">:.4f}&#39;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">j</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_components)]</span>
         <span style="color: #F8F8F2">loading_table_x</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(row)</span>
 
     <span style="color: #F8F8F2">loading_table_y</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
-    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(len(Y_cols)):</span>
-        <span style="color: #F8F8F2">row</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&#39;Y{</span><span style="color: #F8F8F2">i </span><span style="color: #FF4689">+</span><span style="color: #F8F8F2"> </span><span style="color: #AE81FF">1</span><span style="color: #E6DB74">}&#39;</span><span style="color: #F8F8F2">]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">y_loadings[j][i]</span><span style="color: #E6DB74">:.4f}&#39;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">j</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_components)]</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i,</span> <span style="color: #F8F8F2">col_name</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">enumerate(Y_cols):</span>
+        <span style="color: #F8F8F2">row</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[col_name]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">y_loadings[j][i]</span><span style="color: #E6DB74">:.4f}&#39;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">j</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_components)]</span>
         <span style="color: #F8F8F2">loading_table_y</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(row)</span>
 
     <span style="color: #959077"># 表4：典型变量得分</span>
@@ -2313,7 +2725,308 @@ window.MODULE_HTML = {
         <i class="fas fa-file-code"></i> Correspondence.py
         <span class="badge">Correspondence</span>
       </div>
-      <pre class="python-code"><code><span style="color: #959077"># 此处存放 对应分析 代码</span>
+      <pre class="python-code"><code><span style="color: #FF4689">import</span><span style="color: #F8F8F2"> pandas </span><span style="color: #66D9EF">as</span><span style="color: #F8F8F2"> pd</span>
+<span style="color: #FF4689">import</span><span style="color: #F8F8F2"> numpy </span><span style="color: #66D9EF">as</span><span style="color: #F8F8F2"> np</span>
+<span style="color: #FF4689">import</span><span style="color: #F8F8F2"> matplotlib.pyplot </span><span style="color: #66D9EF">as</span><span style="color: #F8F8F2"> plt</span>
+<span style="color: #FF4689">import</span><span style="color: #F8F8F2"> io</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">get_columns</span><span style="color: #F8F8F2">(options):</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">isinstance(options,</span> <span style="color: #F8F8F2">dict):</span>
+        <span style="color: #F8F8F2">options</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_py()</span>
+    <span style="color: #F8F8F2">data_path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;data_path&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">data_path:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;请先在左侧上传数据文件&quot;</span><span style="color: #F8F8F2">}</span>
+    <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(data_path)</span>
+    <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">e:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&quot;读取数据失败: {</span><span style="color: #F8F8F2">e</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">}</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;columns&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">tolist()}</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">analyze</span><span style="color: #F8F8F2">(options):</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">isinstance(options,</span> <span style="color: #F8F8F2">dict):</span>
+        <span style="color: #F8F8F2">options</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">to_py()</span>
+
+    <span style="color: #F8F8F2">data_path</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;data_path&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">data_path:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;请先在左侧上传数据文件&quot;</span><span style="color: #F8F8F2">}</span>
+
+    <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">df</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">read_csv(data_path)</span>
+    <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">e:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&quot;读取数据失败: {</span><span style="color: #F8F8F2">e</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">}</span>
+
+    <span style="color: #F8F8F2">row_var</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;row_var&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">col_var</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;col_var&#39;</span><span style="color: #F8F8F2">)</span>
+
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">row_var</span> <span style="color: #FF4689">not</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&quot;列名不存在: {</span><span style="color: #F8F8F2">row_var</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">}</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">col_var</span> <span style="color: #FF4689">not</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&quot;列名不存在: {</span><span style="color: #F8F8F2">col_var</span><span style="color: #E6DB74">}&quot;</span><span style="color: #F8F8F2">}</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">row_var</span> <span style="color: #FF4689">==</span> <span style="color: #F8F8F2">col_var:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&quot;行列变量不能相同&quot;</span><span style="color: #F8F8F2">}</span>
+
+    <span style="color: #F8F8F2">ct</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">crosstab(df[row_var],</span> <span style="color: #F8F8F2">df[col_var])</span>
+    <span style="color: #F8F8F2">n_rows,</span> <span style="color: #F8F8F2">n_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">ct</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">shape</span>
+
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">n_rows</span> <span style="color: #FF4689">&lt;</span> <span style="color: #AE81FF">2</span> <span style="color: #FF4689">or</span> <span style="color: #F8F8F2">n_cols</span> <span style="color: #FF4689">&lt;</span> <span style="color: #AE81FF">2</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&quot;列联表太小：{</span><span style="color: #F8F8F2">n_rows</span><span style="color: #E6DB74">}行×{</span><span style="color: #F8F8F2">n_cols</span><span style="color: #E6DB74">}列，至少需要2×2&quot;</span><span style="color: #F8F8F2">}</span>
+
+    <span style="color: #F8F8F2">row_labels</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">ct</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">index</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">tolist()</span>
+    <span style="color: #F8F8F2">col_labels</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">ct</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">tolist()</span>
+
+    <span style="color: #F8F8F2">F</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">ct</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">values</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">astype(float)</span>
+    <span style="color: #F8F8F2">N</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">F</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum()</span>
+    <span style="color: #F8F8F2">P</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">F</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">N</span>
+
+    <span style="color: #F8F8F2">r</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">P</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum(axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">c</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">P</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum(axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">)</span>
+
+    <span style="color: #F8F8F2">Dr_inv_sqrt</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">diag(</span><span style="color: #AE81FF">1.0</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sqrt(r</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1e-15</span><span style="color: #F8F8F2">))</span>
+    <span style="color: #F8F8F2">Dc_inv_sqrt</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">diag(</span><span style="color: #AE81FF">1.0</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sqrt(c</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1e-15</span><span style="color: #F8F8F2">))</span>
+
+    <span style="color: #F8F8F2">S</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">Dr_inv_sqrt</span> <span style="color: #FF4689">@</span> <span style="color: #F8F8F2">(P</span> <span style="color: #FF4689">-</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">outer(r,</span> <span style="color: #F8F8F2">c))</span> <span style="color: #FF4689">@</span> <span style="color: #F8F8F2">Dc_inv_sqrt</span>
+
+    <span style="color: #F8F8F2">U,</span> <span style="color: #F8F8F2">s,</span> <span style="color: #F8F8F2">Vt</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">linalg</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">svd(S,</span> <span style="color: #F8F8F2">full_matrices</span><span style="color: #FF4689">=</span><span style="color: #66D9EF">False</span><span style="color: #F8F8F2">)</span>
+
+    <span style="color: #F8F8F2">tol</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">1e-10</span>
+    <span style="color: #F8F8F2">valid</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">s</span> <span style="color: #FF4689">&gt;</span> <span style="color: #F8F8F2">tol</span>
+    <span style="color: #F8F8F2">s</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">s[valid]</span>
+    <span style="color: #F8F8F2">U</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">U[:,</span> <span style="color: #F8F8F2">valid]</span>
+    <span style="color: #F8F8F2">Vt</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">Vt[valid,</span> <span style="color: #F8F8F2">:]</span>
+
+    <span style="color: #F8F8F2">max_dims</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">min(len(s),</span> <span style="color: #F8F8F2">n_rows</span> <span style="color: #FF4689">-</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">n_cols</span> <span style="color: #FF4689">-</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">n_dims_raw</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;n_dims&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">n_dims</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">n_dims_raw</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">(n_dims_raw</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">n_dims_raw</span> <span style="color: #FF4689">&gt;</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">)</span> <span style="color: #66D9EF">else</span> <span style="color: #AE81FF">2</span>
+    <span style="color: #F8F8F2">n_dims</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">min(n_dims,</span> <span style="color: #F8F8F2">max_dims)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">n_dims</span> <span style="color: #FF4689">&lt;</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">n_dims</span> <span style="color: #FF4689">=</span> <span style="color: #AE81FF">1</span>
+
+    <span style="color: #F8F8F2">s_k</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">s[:n_dims]</span>
+    <span style="color: #F8F8F2">U_k</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">U[:,</span> <span style="color: #F8F8F2">:n_dims]</span>
+    <span style="color: #F8F8F2">Vt_k</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">Vt[:n_dims,</span> <span style="color: #F8F8F2">:]</span>
+
+    <span style="color: #F8F8F2">inertia</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">s_k</span> <span style="color: #FF4689">**</span> <span style="color: #AE81FF">2</span>
+    <span style="color: #F8F8F2">total_inertia</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum(s</span> <span style="color: #FF4689">**</span> <span style="color: #AE81FF">2</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">explained_ratio</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">inertia</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">(total_inertia</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1e-15</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">cum_ratio</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">cumsum(explained_ratio)</span>
+
+    <span style="color: #F8F8F2">phi</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">Dr_inv_sqrt</span> <span style="color: #FF4689">@</span> <span style="color: #F8F8F2">U_k</span>
+    <span style="color: #F8F8F2">gamma</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">Dc_inv_sqrt</span> <span style="color: #FF4689">@</span> <span style="color: #F8F8F2">Vt_k</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">T</span>
+
+    <span style="color: #F8F8F2">row_principal</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">phi</span> <span style="color: #FF4689">*</span> <span style="color: #F8F8F2">s_k[np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">newaxis,</span> <span style="color: #F8F8F2">:]</span>
+    <span style="color: #F8F8F2">col_principal</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">gamma</span> <span style="color: #FF4689">*</span> <span style="color: #F8F8F2">s_k[np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">newaxis,</span> <span style="color: #F8F8F2">:]</span>
+
+    <span style="color: #F8F8F2">row_sym</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">phi</span> <span style="color: #FF4689">*</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sqrt(s_k[np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">newaxis,</span> <span style="color: #F8F8F2">:])</span>
+    <span style="color: #F8F8F2">col_sym</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">gamma</span> <span style="color: #FF4689">*</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sqrt(s_k[np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">newaxis,</span> <span style="color: #F8F8F2">:])</span>
+
+    <span style="color: #F8F8F2">row_contrib</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">zeros((n_rows,</span> <span style="color: #F8F8F2">n_dims))</span>
+    <span style="color: #F8F8F2">col_contrib</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">zeros((n_cols,</span> <span style="color: #F8F8F2">n_dims))</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">k</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_dims):</span>
+        <span style="color: #F8F8F2">row_contrib[:,</span> <span style="color: #F8F8F2">k]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">r</span> <span style="color: #FF4689">*</span> <span style="color: #F8F8F2">row_principal[:,</span> <span style="color: #F8F8F2">k]</span> <span style="color: #FF4689">**</span> <span style="color: #AE81FF">2</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">(inertia[k]</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1e-15</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">col_contrib[:,</span> <span style="color: #F8F8F2">k]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">c</span> <span style="color: #FF4689">*</span> <span style="color: #F8F8F2">col_principal[:,</span> <span style="color: #F8F8F2">k]</span> <span style="color: #FF4689">**</span> <span style="color: #AE81FF">2</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">(inertia[k]</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1e-15</span><span style="color: #F8F8F2">)</span>
+
+    <span style="color: #F8F8F2">row_cos2</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">zeros((n_rows,</span> <span style="color: #F8F8F2">n_dims))</span>
+    <span style="color: #F8F8F2">col_cos2</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">zeros((n_cols,</span> <span style="color: #F8F8F2">n_dims))</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_rows):</span>
+        <span style="color: #F8F8F2">denom</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum(row_principal[i,</span> <span style="color: #F8F8F2">:]</span> <span style="color: #FF4689">**</span> <span style="color: #AE81FF">2</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1e-15</span>
+        <span style="color: #F8F8F2">row_cos2[i,</span> <span style="color: #F8F8F2">:]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">row_principal[i,</span> <span style="color: #F8F8F2">:]</span> <span style="color: #FF4689">**</span> <span style="color: #AE81FF">2</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">denom</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">j</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_cols):</span>
+        <span style="color: #F8F8F2">denom</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum(col_principal[j,</span> <span style="color: #F8F8F2">:]</span> <span style="color: #FF4689">**</span> <span style="color: #AE81FF">2</span><span style="color: #F8F8F2">)</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1e-15</span>
+        <span style="color: #F8F8F2">col_cos2[j,</span> <span style="color: #F8F8F2">:]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">col_principal[j,</span> <span style="color: #F8F8F2">:]</span> <span style="color: #FF4689">**</span> <span style="color: #AE81FF">2</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">denom</span>
+
+    <span style="color: #F8F8F2">svgs</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+
+    <span style="color: #959077"># Chart 1: Symmetric Map</span>
+    <span style="color: #F8F8F2">fig1,</span> <span style="color: #F8F8F2">ax1</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">subplots(figsize</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">(</span><span style="color: #AE81FF">8</span><span style="color: #F8F8F2">,</span> <span style="color: #AE81FF">7</span><span style="color: #F8F8F2">))</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">n_dims</span> <span style="color: #FF4689">&gt;=</span> <span style="color: #AE81FF">2</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">ax1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">scatter(row_sym[:,</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">row_sym[:,</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">c</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;steelblue&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">edgecolors</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;#1e3b5c&#39;</span><span style="color: #F8F8F2">,</span>
+                    <span style="color: #F8F8F2">s</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">80</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">zorder</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">3</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">label</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;Rows&#39;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">ax1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">scatter(col_sym[:,</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">col_sym[:,</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">c</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;crimson&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">edgecolors</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;darkred&#39;</span><span style="color: #F8F8F2">,</span>
+                    <span style="color: #F8F8F2">s</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">80</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">marker</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;s&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">zorder</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">3</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">label</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;Columns&#39;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i,</span> <span style="color: #F8F8F2">lbl</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">enumerate(row_labels):</span>
+            <span style="color: #F8F8F2">ax1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">annotate(lbl,</span> <span style="color: #F8F8F2">(row_sym[i,</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">row_sym[i,</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]),</span>
+                         <span style="color: #F8F8F2">textcoords</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;offset points&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">xytext</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">(</span><span style="color: #AE81FF">5</span><span style="color: #F8F8F2">,</span> <span style="color: #AE81FF">5</span><span style="color: #F8F8F2">),</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">8</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">j,</span> <span style="color: #F8F8F2">lbl</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">enumerate(col_labels):</span>
+            <span style="color: #F8F8F2">ax1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">annotate(lbl,</span> <span style="color: #F8F8F2">(col_sym[j,</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">],</span> <span style="color: #F8F8F2">col_sym[j,</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]),</span>
+                         <span style="color: #F8F8F2">textcoords</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;offset points&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">xytext</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">(</span><span style="color: #AE81FF">5</span><span style="color: #F8F8F2">,</span> <span style="color: #AE81FF">5</span><span style="color: #F8F8F2">),</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">8</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">ax1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xlabel(</span><span style="color: #E6DB74">f&#39;Dimension 1 ({</span><span style="color: #F8F8F2">explained_ratio[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span><span style="color: #E6DB74">:.1%})&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">11</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">ax1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_ylabel(</span><span style="color: #E6DB74">f&#39;Dimension 2 ({</span><span style="color: #F8F8F2">explained_ratio[</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]</span><span style="color: #E6DB74">:.1%})&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">11</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">ax1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">text(</span><span style="color: #AE81FF">0.5</span><span style="color: #F8F8F2">,</span> <span style="color: #AE81FF">0.5</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;Only one dimension available&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">transform</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">ax1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">transAxes,</span>
+                 <span style="color: #F8F8F2">ha</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;center&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">va</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;center&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">14</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">color</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;gray&#39;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">ax1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xlabel(</span><span style="color: #E6DB74">f&#39;Dimension 1 ({</span><span style="color: #F8F8F2">explained_ratio[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span><span style="color: #E6DB74">:.1%})&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">11</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">ax1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_ylabel(</span><span style="color: #E6DB74">&#39;Dimension 2&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">11</span><span style="color: #F8F8F2">)</span>
+
+    <span style="color: #F8F8F2">ax1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">axhline(y</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">color</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;grey&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">linestyle</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;--&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">alpha</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0.5</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">zorder</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">axvline(x</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">color</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;grey&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">linestyle</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;--&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">alpha</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0.5</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">zorder</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_title(</span><span style="color: #E6DB74">&#39;Correspondence Analysis - Symmetric Map&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">13</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontweight</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;bold&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">legend(fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">9</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">grid(alpha</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0.3</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">linestyle</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;--&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">zorder</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">fig1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">tight_layout()</span>
+    <span style="color: #F8F8F2">buf</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">io</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">BytesIO()</span>
+    <span style="color: #F8F8F2">fig1</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">savefig(buf,</span> <span style="color: #F8F8F2">format</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;svg&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">close(fig1)</span>
+    <span style="color: #F8F8F2">svgs</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(buf</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">getvalue()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">decode())</span>
+
+    <span style="color: #959077"># Chart 2: Scree Plot</span>
+    <span style="color: #F8F8F2">fig2,</span> <span style="color: #F8F8F2">ax2</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">subplots(figsize</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">(</span><span style="color: #AE81FF">8</span><span style="color: #F8F8F2">,</span> <span style="color: #AE81FF">4</span><span style="color: #F8F8F2">))</span>
+    <span style="color: #F8F8F2">all_inertia</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">s</span> <span style="color: #FF4689">**</span> <span style="color: #AE81FF">2</span>
+    <span style="color: #F8F8F2">n_all</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">len(s)</span>
+    <span style="color: #F8F8F2">dims</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">range(</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">n_all</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">bar_colors</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">cm</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">Blues(np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">linspace(</span><span style="color: #AE81FF">0.4</span><span style="color: #F8F8F2">,</span> <span style="color: #AE81FF">0.9</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">n_all))</span>
+    <span style="color: #F8F8F2">bars</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">ax2</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">bar(dims,</span> <span style="color: #F8F8F2">all_inertia,</span> <span style="color: #F8F8F2">color</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">bar_colors,</span> <span style="color: #F8F8F2">edgecolor</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;#1e3b5c&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">linewidth</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">1.2</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">b,</span> <span style="color: #F8F8F2">v</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">zip(bars,</span> <span style="color: #F8F8F2">all_inertia):</span>
+        <span style="color: #F8F8F2">ax2</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">text(b</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get_x()</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">b</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get_width()</span> <span style="color: #FF4689">/</span> <span style="color: #AE81FF">2</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">b</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get_height()</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">0.001</span><span style="color: #F8F8F2">,</span>
+                 <span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">v</span><span style="color: #E6DB74">:.4f}&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">ha</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;center&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">va</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;bottom&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">8</span><span style="color: #F8F8F2">)</span>
+
+    <span style="color: #F8F8F2">ax3</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">ax2</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">twinx()</span>
+    <span style="color: #F8F8F2">cum_prop</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">cumsum(all_inertia)</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">(total_inertia</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1e-15</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax3</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">plot(dims,</span> <span style="color: #F8F8F2">cum_prop,</span> <span style="color: #E6DB74">&#39;ro-&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">markersize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">6</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">linewidth</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">2</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">label</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;Cumulative proportion&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax3</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">axhline(y</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0.8</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">color</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;green&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">linestyle</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;--&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">alpha</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0.6</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">linewidth</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax3</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">axhline(y</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0.9</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">color</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;red&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">linestyle</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;--&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">alpha</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0.6</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">linewidth</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span>
+
+    <span style="color: #F8F8F2">ax2</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xlabel(</span><span style="color: #E6DB74">&#39;Dimension&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">11</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax2</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_ylabel(</span><span style="color: #E6DB74">&#39;Inertia&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">11</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax3</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_ylabel(</span><span style="color: #E6DB74">&#39;Cumulative proportion&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">11</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax2</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_title(</span><span style="color: #E6DB74">&#39;Inertia and Cumulative Proportion&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">13</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontweight</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;bold&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax2</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xticks(dims)</span>
+    <span style="color: #F8F8F2">ax2</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">grid(axis</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;y&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">alpha</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0.3</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">linestyle</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;--&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">fig2</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">tight_layout()</span>
+    <span style="color: #F8F8F2">buf</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">io</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">BytesIO()</span>
+    <span style="color: #F8F8F2">fig2</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">savefig(buf,</span> <span style="color: #F8F8F2">format</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;svg&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">close(fig2)</span>
+    <span style="color: #F8F8F2">svgs</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(buf</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">getvalue()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">decode())</span>
+
+    <span style="color: #959077"># Chart 3: Row Contributions</span>
+    <span style="color: #F8F8F2">dim_label</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">&#39;+&#39;</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">join([</span><span style="color: #E6DB74">f&#39;Dim{</span><span style="color: #F8F8F2">d </span><span style="color: #FF4689">+</span><span style="color: #F8F8F2"> </span><span style="color: #AE81FF">1</span><span style="color: #E6DB74">}&#39;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">d</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_dims)])</span>
+    <span style="color: #F8F8F2">top_n_rows</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">min(</span><span style="color: #AE81FF">15</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">n_rows)</span>
+    <span style="color: #F8F8F2">row_total_contrib</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum(row_contrib,</span> <span style="color: #F8F8F2">axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">top_idx_rows</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">argsort(row_total_contrib)[</span><span style="color: #FF4689">-</span><span style="color: #F8F8F2">top_n_rows:][::</span><span style="color: #FF4689">-</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]</span>
+
+    <span style="color: #F8F8F2">fig3,</span> <span style="color: #F8F8F2">ax4</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">subplots(figsize</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">(</span><span style="color: #AE81FF">8</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">max(</span><span style="color: #AE81FF">4</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">top_n_rows</span> <span style="color: #FF4689">*</span> <span style="color: #AE81FF">0.35</span><span style="color: #F8F8F2">)))</span>
+    <span style="color: #F8F8F2">ax4</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">barh(range(top_n_rows),</span> <span style="color: #F8F8F2">row_total_contrib[top_idx_rows],</span>
+             <span style="color: #F8F8F2">color</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;steelblue&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">edgecolor</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;#1e3b5c&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax4</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_yticks(range(top_n_rows))</span>
+    <span style="color: #F8F8F2">ax4</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_yticklabels([row_labels[i]</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">top_idx_rows],</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">9</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax4</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">invert_yaxis()</span>
+    <span style="color: #F8F8F2">ax4</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xlabel(</span><span style="color: #E6DB74">f&#39;Total contribution ({</span><span style="color: #F8F8F2">dim_label</span><span style="color: #E6DB74">})&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">11</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax4</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_title(</span><span style="color: #E6DB74">&#39;Row contributions to dimensions&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">13</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontweight</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;bold&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax4</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">grid(axis</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;x&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">alpha</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0.3</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">linestyle</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;--&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">fig3</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">tight_layout()</span>
+    <span style="color: #F8F8F2">buf</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">io</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">BytesIO()</span>
+    <span style="color: #F8F8F2">fig3</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">savefig(buf,</span> <span style="color: #F8F8F2">format</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;svg&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">close(fig3)</span>
+    <span style="color: #F8F8F2">svgs</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(buf</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">getvalue()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">decode())</span>
+
+    <span style="color: #959077"># Chart 4: Column Contributions</span>
+    <span style="color: #F8F8F2">top_n_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">min(</span><span style="color: #AE81FF">15</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">n_cols)</span>
+    <span style="color: #F8F8F2">col_total_contrib</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum(col_contrib,</span> <span style="color: #F8F8F2">axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">top_idx_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">argsort(col_total_contrib)[</span><span style="color: #FF4689">-</span><span style="color: #F8F8F2">top_n_cols:][::</span><span style="color: #FF4689">-</span><span style="color: #AE81FF">1</span><span style="color: #F8F8F2">]</span>
+
+    <span style="color: #F8F8F2">fig4,</span> <span style="color: #F8F8F2">ax5</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">subplots(figsize</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">(</span><span style="color: #AE81FF">8</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">max(</span><span style="color: #AE81FF">4</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">top_n_cols</span> <span style="color: #FF4689">*</span> <span style="color: #AE81FF">0.35</span><span style="color: #F8F8F2">)))</span>
+    <span style="color: #F8F8F2">ax5</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">barh(range(top_n_cols),</span> <span style="color: #F8F8F2">col_total_contrib[top_idx_cols],</span>
+             <span style="color: #F8F8F2">color</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;crimson&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">edgecolor</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;darkred&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax5</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_yticks(range(top_n_cols))</span>
+    <span style="color: #F8F8F2">ax5</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_yticklabels([col_labels[j]</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">j</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">top_idx_cols],</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">9</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax5</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">invert_yaxis()</span>
+    <span style="color: #F8F8F2">ax5</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_xlabel(</span><span style="color: #E6DB74">f&#39;Total contribution ({</span><span style="color: #F8F8F2">dim_label</span><span style="color: #E6DB74">})&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">11</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax5</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_title(</span><span style="color: #E6DB74">&#39;Column contributions to dimensions&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">13</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontweight</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;bold&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">ax5</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">grid(axis</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;x&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">alpha</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0.3</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">linestyle</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;--&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">fig4</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">tight_layout()</span>
+    <span style="color: #F8F8F2">buf</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">io</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">BytesIO()</span>
+    <span style="color: #F8F8F2">fig4</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">savefig(buf,</span> <span style="color: #F8F8F2">format</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;svg&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">close(fig4)</span>
+    <span style="color: #F8F8F2">svgs</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(buf</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">getvalue()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">decode())</span>
+
+    <span style="color: #959077"># --- Tables ---</span>
+    <span style="color: #959077"># Table 1: Inertia table</span>
+    <span style="color: #F8F8F2">inertia_header</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;维度&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;奇异值&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;惯性&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;解释率&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;累积率&#39;</span><span style="color: #F8F8F2">]</span>
+    <span style="color: #F8F8F2">inertia_rows</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">k</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_dims):</span>
+        <span style="color: #F8F8F2">inertia_rows</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append([</span>
+            <span style="color: #E6DB74">f&#39;Dim {</span><span style="color: #F8F8F2">k </span><span style="color: #FF4689">+</span><span style="color: #F8F8F2"> </span><span style="color: #AE81FF">1</span><span style="color: #E6DB74">}&#39;</span><span style="color: #F8F8F2">,</span>
+            <span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">s_k[k]</span><span style="color: #E6DB74">:.4f}&#39;</span><span style="color: #F8F8F2">,</span>
+            <span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">inertia[k]</span><span style="color: #E6DB74">:.4f}&#39;</span><span style="color: #F8F8F2">,</span>
+            <span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">explained_ratio[k]</span><span style="color: #E6DB74">:.1%}&#39;</span><span style="color: #F8F8F2">,</span>
+            <span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">cum_ratio[k]</span><span style="color: #E6DB74">:.1%}&#39;</span>
+        <span style="color: #F8F8F2">])</span>
+
+    <span style="color: #959077"># Table 2: Row coordinates</span>
+    <span style="color: #F8F8F2">row_header</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;类别&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;Dim1&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;Dim2&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;贡献(Dim1)&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;贡献(Dim2)&#39;</span><span style="color: #F8F8F2">,</span>
+                  <span style="color: #E6DB74">&quot;Cos</span><span style="color: #AE81FF">\\u00b2</span><span style="color: #E6DB74">(Dim1)&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;Cos</span><span style="color: #AE81FF">\\u00b2</span><span style="color: #E6DB74">(Dim2)&quot;</span><span style="color: #F8F8F2">]</span>
+    <span style="color: #F8F8F2">row_rows</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_rows):</span>
+        <span style="color: #F8F8F2">row</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[row_labels[i]]</span>
+        <span style="color: #959077"># Dim1, Dim2</span>
+        <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">d</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(</span><span style="color: #AE81FF">2</span><span style="color: #F8F8F2">):</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">d</span> <span style="color: #FF4689">&lt;</span> <span style="color: #F8F8F2">n_dims:</span>
+                <span style="color: #F8F8F2">row</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(</span><span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">row_principal[i, d]</span><span style="color: #E6DB74">:.4f}&#39;</span><span style="color: #F8F8F2">)</span>
+            <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #F8F8F2">row</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(</span><span style="color: #E6DB74">&#39;0.0000&#39;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #959077"># 贡献(Dim1), 贡献(Dim2)</span>
+        <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">d</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(</span><span style="color: #AE81FF">2</span><span style="color: #F8F8F2">):</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">d</span> <span style="color: #FF4689">&lt;</span> <span style="color: #F8F8F2">n_dims:</span>
+                <span style="color: #F8F8F2">row</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(</span><span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">row_contrib[i, d] </span><span style="color: #FF4689">*</span><span style="color: #F8F8F2"> </span><span style="color: #AE81FF">100</span><span style="color: #E6DB74">:.2f}%&#39;</span><span style="color: #F8F8F2">)</span>
+            <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #F8F8F2">row</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(</span><span style="color: #E6DB74">&#39;0.00%&#39;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #959077"># Cos²(Dim1), Cos²(Dim2)</span>
+        <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">d</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(</span><span style="color: #AE81FF">2</span><span style="color: #F8F8F2">):</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">d</span> <span style="color: #FF4689">&lt;</span> <span style="color: #F8F8F2">n_dims:</span>
+                <span style="color: #F8F8F2">row</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(</span><span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">row_cos2[i, d]</span><span style="color: #E6DB74">:.4f}&#39;</span><span style="color: #F8F8F2">)</span>
+            <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #F8F8F2">row</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(</span><span style="color: #E6DB74">&#39;0.0000&#39;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">row_rows</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(row)</span>
+
+    <span style="color: #959077"># Table 3: Column coordinates</span>
+    <span style="color: #F8F8F2">col_header</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;类别&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;Dim1&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;Dim2&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;贡献(Dim1)&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;贡献(Dim2)&#39;</span><span style="color: #F8F8F2">,</span>
+                  <span style="color: #E6DB74">&quot;Cos</span><span style="color: #AE81FF">\\u00b2</span><span style="color: #E6DB74">(Dim1)&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;Cos</span><span style="color: #AE81FF">\\u00b2</span><span style="color: #E6DB74">(Dim2)&quot;</span><span style="color: #F8F8F2">]</span>
+    <span style="color: #F8F8F2">col_rows</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">j</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_cols):</span>
+        <span style="color: #F8F8F2">row</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[col_labels[j]]</span>
+        <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">d</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(</span><span style="color: #AE81FF">2</span><span style="color: #F8F8F2">):</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">d</span> <span style="color: #FF4689">&lt;</span> <span style="color: #F8F8F2">n_dims:</span>
+                <span style="color: #F8F8F2">row</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(</span><span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">col_principal[j, d]</span><span style="color: #E6DB74">:.4f}&#39;</span><span style="color: #F8F8F2">)</span>
+            <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #F8F8F2">row</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(</span><span style="color: #E6DB74">&#39;0.0000&#39;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">d</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(</span><span style="color: #AE81FF">2</span><span style="color: #F8F8F2">):</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">d</span> <span style="color: #FF4689">&lt;</span> <span style="color: #F8F8F2">n_dims:</span>
+                <span style="color: #F8F8F2">row</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(</span><span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">col_contrib[j, d] </span><span style="color: #FF4689">*</span><span style="color: #F8F8F2"> </span><span style="color: #AE81FF">100</span><span style="color: #E6DB74">:.2f}%&#39;</span><span style="color: #F8F8F2">)</span>
+            <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #F8F8F2">row</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(</span><span style="color: #E6DB74">&#39;0.00%&#39;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">d</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(</span><span style="color: #AE81FF">2</span><span style="color: #F8F8F2">):</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">d</span> <span style="color: #FF4689">&lt;</span> <span style="color: #F8F8F2">n_dims:</span>
+                <span style="color: #F8F8F2">row</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(</span><span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">col_cos2[j, d]</span><span style="color: #E6DB74">:.4f}&#39;</span><span style="color: #F8F8F2">)</span>
+            <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #F8F8F2">row</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(</span><span style="color: #E6DB74">&#39;0.0000&#39;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #F8F8F2">col_rows</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(row)</span>
+
+    <span style="color: #959077"># Table 4: Contingency table</span>
+    <span style="color: #F8F8F2">ct_header</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[row_var]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">col_labels</span>
+    <span style="color: #F8F8F2">ct_rows</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[]</span>
+    <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">i</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_rows):</span>
+        <span style="color: #F8F8F2">row</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[row_labels[i]]</span> <span style="color: #FF4689">+</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">int(F[i, j])</span><span style="color: #E6DB74">}&#39;</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">j</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">range(n_cols)]</span>
+        <span style="color: #F8F8F2">ct_rows</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">append(row)</span>
+
+    <span style="color: #959077"># Metrics</span>
+    <span style="color: #F8F8F2">pct</span> <span style="color: #FF4689">=</span> <span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">(sum(explained_ratio) </span><span style="color: #66D9EF">if</span><span style="color: #F8F8F2"> n_dims </span><span style="color: #FF4689">&gt;=</span><span style="color: #F8F8F2"> </span><span style="color: #AE81FF">2</span><span style="color: #F8F8F2"> </span><span style="color: #66D9EF">else</span><span style="color: #F8F8F2"> explained_ratio[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">])</span><span style="color: #E6DB74">:.1%}&#39;</span>
+
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span>
+        <span style="color: #E6DB74">&quot;svgs&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">svgs,</span>
+        <span style="color: #E6DB74">&quot;metrics&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">{</span>
+            <span style="color: #E6DB74">&quot;行类别数&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">n_rows,</span>
+            <span style="color: #E6DB74">&quot;列类别数&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">n_cols,</span>
+            <span style="color: #E6DB74">&quot;总惯性&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&#39;{</span><span style="color: #F8F8F2">total_inertia</span><span style="color: #E6DB74">:.4f}&#39;</span><span style="color: #F8F8F2">,</span>
+            <span style="color: #E6DB74">&quot;前2维解释率&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">pct</span>
+        <span style="color: #F8F8F2">},</span>
+        <span style="color: #E6DB74">&quot;tables&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">[</span>
+            <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">inertia_header,</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">inertia_rows},</span>
+            <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">row_header,</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">row_rows},</span>
+            <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">col_header,</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">col_rows},</span>
+            <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;header&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">ct_header,</span> <span style="color: #E6DB74">&quot;rows&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">ct_rows}</span>
+        <span style="color: #F8F8F2">]</span>
+    <span style="color: #F8F8F2">}</span>
 </code></pre>
     </div>
     <div class="python-file-card">
@@ -2357,8 +3070,11 @@ window.MODULE_HTML = {
         <span style="color: #F8F8F2">selected_indicators</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[c</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">c</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">selected_indicators</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">split(</span><span style="color: #E6DB74">&#39;,&#39;</span><span style="color: #F8F8F2">)</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">c</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()]</span>
     <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">selected_indicators</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">isinstance(selected_indicators,</span> <span style="color: #F8F8F2">list)</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">len(selected_indicators)</span> <span style="color: #FF4689">&gt;</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">:</span>
         <span style="color: #F8F8F2">available_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[col</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">col</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">selected_indicators</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">col</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">numeric_cols]</span>
-        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">len(available_cols)</span> <span style="color: #FF4689">&gt;=</span> <span style="color: #AE81FF">2</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #959077"># 只要用户明确指定了指标，就只使用匹配到的列（至少 1 列即可生效）</span>
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">len(available_cols)</span> <span style="color: #FF4689">&gt;=</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">:</span>
             <span style="color: #F8F8F2">numeric_cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">available_cols</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">len(numeric_cols)</span> <span style="color: #FF4689">&lt;</span> <span style="color: #AE81FF">2</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">f&quot;指标匹配后不足 2 个数值列（匹配到: {</span><span style="color: #F8F8F2">numeric_cols</span><span style="color: #E6DB74">}）&quot;</span><span style="color: #F8F8F2">}</span>
     
     <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">method_type</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;ahp&#39;</span><span style="color: #F8F8F2">:</span>
         <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">run_ahp(df,</span> <span style="color: #F8F8F2">numeric_cols,</span> <span style="color: #F8F8F2">options)</span>
@@ -2368,18 +3084,35 @@ window.MODULE_HTML = {
 
 <span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">run_ahp</span><span style="color: #F8F8F2">(df,</span> <span style="color: #F8F8F2">numeric_cols,</span> <span style="color: #F8F8F2">options):</span>
 <span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;层次分析法&quot;&quot;&quot;</span>
-    <span style="color: #959077"># 获取判断矩阵</span>
-    <span style="color: #F8F8F2">judgement_matrix_str</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;judgement_matrix&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #959077"># 判断矩阵获取优先级：多矩阵(judgement_matrices) &gt; 单矩阵(judgement_matrix) &gt; 自动权重</span>
     <span style="color: #F8F8F2">weights</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">None</span>
-    
-    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">judgement_matrix_str:</span>
+
+    <span style="color: #959077"># 1. 尝试获取多判断矩阵（来自网格矩阵UI）</span>
+    <span style="color: #F8F8F2">judgement_matrices_str</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;judgement_matrices&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">judgement_matrices_str:</span>
         <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
-            <span style="color: #F8F8F2">judgement_matrix</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">json</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">loads(judgement_matrix_str)</span>
-            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">len(judgement_matrix)</span> <span style="color: #FF4689">==</span> <span style="color: #F8F8F2">len(numeric_cols):</span>
-                <span style="color: #F8F8F2">weights</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">calculate_ahp_weights(judgement_matrix)</span>
+            <span style="color: #F8F8F2">matrices</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">json</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">loads(judgement_matrices_str)</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">isinstance(matrices,</span> <span style="color: #F8F8F2">list)</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">len(matrices)</span> <span style="color: #FF4689">&gt;</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #959077"># 过滤空矩阵</span>
+                <span style="color: #F8F8F2">valid_matrices</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[m</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">m</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">matrices</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">len(m)</span> <span style="color: #FF4689">==</span> <span style="color: #F8F8F2">len(numeric_cols)]</span>
+                <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">len(valid_matrices)</span> <span style="color: #FF4689">&gt;=</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">:</span>
+                    <span style="color: #F8F8F2">agg_matrix</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">aggregate_matrices(valid_matrices)</span>
+                    <span style="color: #F8F8F2">weights</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">calculate_ahp_weights(agg_matrix)</span>
         <span style="color: #66D9EF">except</span><span style="color: #F8F8F2">:</span>
             <span style="color: #66D9EF">pass</span>
+
+    <span style="color: #959077"># 2. 尝试获取单判断矩阵（向后兼容）</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">weights</span> <span style="color: #FF4689">is</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #F8F8F2">judgement_matrix_str</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;judgement_matrix&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;&#39;</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">judgement_matrix_str:</span>
+            <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #F8F8F2">judgement_matrix</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">json</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">loads(judgement_matrix_str)</span>
+                <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">len(judgement_matrix)</span> <span style="color: #FF4689">==</span> <span style="color: #F8F8F2">len(numeric_cols):</span>
+                    <span style="color: #F8F8F2">weights</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">calculate_ahp_weights(judgement_matrix)</span>
+            <span style="color: #66D9EF">except</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #66D9EF">pass</span>
     
+    <span style="color: #959077"># 3. 自动计算权重（默认）</span>
     <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">weights</span> <span style="color: #FF4689">is</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">:</span>
         <span style="color: #F8F8F2">weights</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">calculate_auto_weights(df,</span> <span style="color: #F8F8F2">numeric_cols)</span>
     
@@ -2426,17 +3159,28 @@ window.MODULE_HTML = {
 <span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">run_comprehensive</span><span style="color: #F8F8F2">(df,</span> <span style="color: #F8F8F2">numeric_cols,</span> <span style="color: #F8F8F2">options):</span>
 <span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;综合分析法&quot;&quot;&quot;</span>
     <span style="color: #F8F8F2">method</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;method&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;topsis&#39;</span><span style="color: #F8F8F2">)</span>
-    <span style="color: #F8F8F2">weight_method</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;weight_method&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;equal&#39;</span><span style="color: #F8F8F2">)</span>
     
-    <span style="color: #959077"># 计算权重</span>
-    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">weight_method</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;equal&#39;</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #F8F8F2">weights</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ones(len(numeric_cols))</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">len(numeric_cols)</span>
-    <span style="color: #66D9EF">elif</span> <span style="color: #F8F8F2">weight_method</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;std&#39;</span><span style="color: #F8F8F2">:</span>
+    <span style="color: #959077"># 权重优先级：AHP 判断矩阵 → 标准差法 → 等权重法</span>
+    <span style="color: #F8F8F2">weights</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">None</span>
+    <span style="color: #F8F8F2">judgement_matrices_str</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">options</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get(</span><span style="color: #E6DB74">&#39;judgement_matrices&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;&#39;</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">judgement_matrices_str:</span>
+        <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #F8F8F2">matrices</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">json</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">loads(judgement_matrices_str)</span>
+            <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">isinstance(matrices,</span> <span style="color: #F8F8F2">list)</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">len(matrices)</span> <span style="color: #FF4689">&gt;</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #F8F8F2">valid_matrices</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[m</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">m</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">matrices</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">len(m)</span> <span style="color: #FF4689">==</span> <span style="color: #F8F8F2">len(numeric_cols)]</span>
+                <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">len(valid_matrices)</span> <span style="color: #FF4689">&gt;=</span> <span style="color: #AE81FF">1</span><span style="color: #F8F8F2">:</span>
+                    <span style="color: #F8F8F2">agg_matrix</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">aggregate_matrices(valid_matrices)</span>
+                    <span style="color: #F8F8F2">weights</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">calculate_ahp_weights(agg_matrix)</span>
+        <span style="color: #66D9EF">except</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #66D9EF">pass</span>
+    
+    <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">weights</span> <span style="color: #FF4689">is</span> <span style="color: #66D9EF">None</span><span style="color: #F8F8F2">:</span>
         <span style="color: #F8F8F2">data</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">df[numeric_cols]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">values</span>
         <span style="color: #F8F8F2">stds</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">data</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">std(axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">)</span>
-        <span style="color: #F8F8F2">weights</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">stds</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">(stds</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum()</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1e-10</span><span style="color: #F8F8F2">)</span>
-    <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #F8F8F2">weights</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ones(len(numeric_cols))</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">len(numeric_cols)</span>
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">stds</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum()</span> <span style="color: #FF4689">&gt;</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #F8F8F2">weights</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">stds</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">(stds</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum()</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1e-10</span><span style="color: #F8F8F2">)</span>
+        <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+            <span style="color: #F8F8F2">weights</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">ones(len(numeric_cols))</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">len(numeric_cols)</span>
     
     <span style="color: #959077"># 标准化</span>
     <span style="color: #F8F8F2">normalized</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">normalize_minmax(df[numeric_cols]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">values)</span>
@@ -2507,6 +3251,29 @@ window.MODULE_HTML = {
     <span style="color: #F8F8F2">stds</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">data_norm</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">std(axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">)</span>
     <span style="color: #F8F8F2">weights</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">stds</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">(stds</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum()</span> <span style="color: #FF4689">+</span> <span style="color: #AE81FF">1e-10</span><span style="color: #F8F8F2">)</span>
     <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">weights</span>
+
+
+<span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">aggregate_matrices</span><span style="color: #F8F8F2">(matrices_list):</span>
+<span style="color: #F8F8F2">    </span><span style="color: #E6DB74">&quot;&quot;&quot;多判断矩阵逐元素几何平均法聚合</span>
+
+<span style="color: #E6DB74">    将多个专家的判断矩阵进行逐元素几何平均，得到聚合判断矩阵。</span>
+
+<span style="color: #E6DB74">    Args:</span>
+<span style="color: #E6DB74">        matrices_list: list of 2D lists/arrays, 每个元素是一个 N×N 判断矩阵</span>
+
+<span style="color: #E6DB74">    Returns:</span>
+<span style="color: #E6DB74">        np.array: 聚合后的判断矩阵</span>
+<span style="color: #E6DB74">    &quot;&quot;&quot;</span>
+    <span style="color: #66D9EF">if</span> <span style="color: #FF4689">not</span> <span style="color: #F8F8F2">matrices_list</span> <span style="color: #FF4689">or</span> <span style="color: #F8F8F2">len(matrices_list)</span> <span style="color: #FF4689">==</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">:</span>
+        <span style="color: #66D9EF">return</span> <span style="color: #66D9EF">None</span>
+    <span style="color: #959077"># 转换为 numpy 数组，shape = (k, n, n)</span>
+    <span style="color: #F8F8F2">matrices_arr</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">array([np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">array(m)</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">m</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">matrices_list])</span>
+    <span style="color: #959077"># 逐元素相乘</span>
+    <span style="color: #F8F8F2">product</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">np</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">prod(matrices_arr,</span> <span style="color: #F8F8F2">axis</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">)</span>
+    <span style="color: #959077"># 几何平均</span>
+    <span style="color: #F8F8F2">k</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">len(matrices_list)</span>
+    <span style="color: #F8F8F2">geom_mean</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">product</span> <span style="color: #FF4689">**</span> <span style="color: #F8F8F2">(</span><span style="color: #AE81FF">1.0</span> <span style="color: #FF4689">/</span> <span style="color: #F8F8F2">k)</span>
+    <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">geom_mean</span>
 
 
 <span style="color: #66D9EF">def</span><span style="color: #F8F8F2"> </span><span style="color: #A6E22E">calculate_ahp_weights</span><span style="color: #F8F8F2">(matrix):</span>
@@ -3431,6 +4198,184 @@ def clean_dataframe(
     return result
 
 
+def preview_data(options):
+    """快速返回数据预览信息（只读前 1000 行）
+
+    接受参数:
+        data_path: CSV 文件路径
+
+    返回:
+        columns: 列名列表
+        dtypes: {列名: 类型字符串}
+        sample: 前 5 行数据（字符串二维数组）
+        n_rows: 总行数
+        suggested_roles: {列名: "index"|"numeric"|"categorical"}
+    """
+    if not isinstance(options, dict):
+        options = options.to_py()
+    data_path = options.get('data_path')
+    if not data_path:
+        return {"error": "未指定数据路径"}
+
+    import csv
+
+    # 编码检测 + CSV 行数
+    columns = None
+    n_rows = 0
+    detected_enc = None
+    for enc in ("utf-8", "utf-8-sig", "gbk", "gb18030"):
+        try:
+            with open(data_path, encoding=enc, newline='') as f:
+                reader = csv.reader(f)
+                columns = next(reader)
+                n_rows = sum(1 for _ in reader)
+            detected_enc = enc
+            break
+        except Exception:
+            continue
+
+    if columns is None:
+        return {"error": f"无法读取文件: {data_path}"}
+    if n_rows == 0:
+        return {"error": "空文件"}
+
+    # pandas 读前 1000 行
+    df_sample = pd.read_csv(data_path, nrows=min(1000, n_rows + 1), encoding=detected_enc)
+
+    # 前 5 行预览
+    sample = []
+    for _, row in df_sample.head(5).iterrows():
+        sample.append(["" if pd.isna(v) else str(v) for v in row])
+
+    # 类型推断 + 角色建议
+    actual_columns = df_sample.columns.tolist()
+    dtypes = {}
+    suggested_roles = {}
+    for i, col in enumerate(actual_columns):
+        dtype_str = str(df_sample[col].dtype)
+        dtypes[col] = dtype_str
+        if i == 0:
+            suggested_roles[col] = "index"
+        elif pd.api.types.is_numeric_dtype(df_sample[col]):
+            suggested_roles[col] = "numeric"
+        else:
+            suggested_roles[col] = "categorical"
+
+    # 补上 csv reader 发现但 pd.read_csv(nrows) 未发现的列
+    for col in columns:
+        if col not in dtypes:
+            dtypes[col] = "unknown"
+            suggested_roles[col] = "categorical" if columns.index(col) > 0 else "index"
+
+    return {
+        "columns": columns,
+        "dtypes": dtypes,
+        "sample": sample,
+        "n_rows": n_rows,
+        "suggested_roles": suggested_roles,
+    }
+
+
+def manual_clean(options):
+    """根据用户指定的列角色清洗数据
+
+    接受参数:
+        data_path: 原始 CSV 路径
+        index_col: 索引列名（保留原样，不做数值处理）
+        numeric_cols: 数值列名列表（清洗 + 均值填补）
+        categorical_cols: 分类列名列表（保留原样）
+
+    返回:
+        path: 清洗后文件路径
+        columns: 总列数
+        numeric_columns: 数值列数
+        categorical_columns: 分类列数
+        rows: 行数
+    """
+    if not isinstance(options, dict):
+        options = options.to_py()
+
+    data_path = options.get('data_path')
+    index_col = options.get('index_col', None)
+    numeric_cols = options.get('numeric_cols', [])
+    categorical_cols = options.get('categorical_cols', [])
+
+    if hasattr(numeric_cols, 'to_py'):
+        numeric_cols = numeric_cols.to_py()
+    if hasattr(categorical_cols, 'to_py'):
+        categorical_cols = categorical_cols.to_py()
+    if isinstance(index_col, list):
+        index_col = index_col[0] if index_col else None
+
+    if not data_path:
+        return {"error": "未指定数据路径"}
+
+    df = _read_csv(data_path)
+    if df is None:
+        return {"error": f"无法读取文件: {data_path}"}
+
+    # 分离索引列
+    index_df = None
+    if index_col and index_col in df.columns:
+        index_df = df[[index_col]]
+
+    # 数值列清洗
+    valid_numeric = [c for c in numeric_cols if c in df.columns]
+    numeric_df = pd.DataFrame(index=df.index)
+    for col in valid_numeric:
+        numeric_df[col] = _clean_series_numeric(df[col])
+
+    # 均值填补（只对有实际数值的列）
+    if not numeric_df.empty and numeric_df.shape[1] > 0:
+        imputer = SimpleImputer(strategy='mean')
+        numeric_array = imputer.fit_transform(numeric_df)
+        numeric_df = pd.DataFrame(numeric_array, columns=numeric_df.columns, index=numeric_df.index)
+
+    # 分类列保留原样
+    valid_cat = [c for c in categorical_cols if c in df.columns]
+    cat_df = df[valid_cat] if valid_cat else pd.DataFrame(index=df.index)
+
+    # 重组
+    parts = []
+    if index_df is not None:
+        parts.append(index_df)
+    if not numeric_df.empty:
+        parts.append(numeric_df)
+    if not cat_df.empty:
+        parts.append(cat_df)
+
+    if not parts:
+        return {"error": "没有选择任何列。请至少指定一列为「数值」或「分类」。", "path": data_path, "columns": 0, "numeric_columns": 0, "categorical_columns": 0, "rows": len(df)}
+
+    result = pd.concat(parts, axis=1)
+
+    # 写文件
+    output_path = data_path.replace('.csv', '.cleaned.csv')
+    if output_path == data_path:
+        base, ext = os.path.splitext(data_path)
+        output_path = f"{base}.cleaned{ext}"
+
+    result.to_csv(output_path, index=False, encoding="utf-8-sig")
+
+    return {
+        "path": output_path,
+        "columns": len(result.columns),
+        "numeric_columns": len(valid_numeric),
+        "categorical_columns": len(valid_cat),
+        "rows": len(result),
+    }
+
+
+def _read_csv(path):
+    """尝试多种编码读取 CSV"""
+    for enc in ("utf-8", "utf-8-sig", "gbk", "gb18030"):
+        try:
+            return pd.read_csv(path, encoding=enc, sep=None, engine="python")
+        except Exception:
+            continue
+    return None
+
+
 def auto_clean(input_path: str, output_path: str = None) -> str:
     """从 input_path 读 CSV，自动清洗后写入 output_path。
 
@@ -3469,6 +4414,21 @@ from sklearn.cross_decomposition import CCA
 from sklearn.preprocessing import StandardScaler
 
 
+def get_columns(options):
+    """获取数值列名列表，供前端选择变量"""
+    if not isinstance(options, dict):
+        options = options.to_py()
+    data_path = options.get('data_path')
+    if not data_path:
+        return {"error": "请先在左侧上传数据文件"}
+    try:
+        df = pd.read_csv(data_path)
+    except Exception as e:
+        return {"error": f"读取数据失败: {e}"}
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    return {"columns": numeric_cols}
+
+
 def analyze(options):
     """
     典型相关分析 (CCA) 模块 - 完整版
@@ -3494,13 +4454,30 @@ def analyze(options):
     if len(numeric_cols) < 2:
         return {"error": "需要至少两列数值型变量才能进行典型相关分析"}
 
-    # 5. 自动分组：前一半列作为 X，后一半列作为 Y
-    n = len(numeric_cols) // 2
-    X_cols = numeric_cols[:n]
-    Y_cols = numeric_cols[n:]
+    # 5. 获取用户指定的 X/Y 列名（来自前端双选框）
+    x_cols_param = options.get('x_cols', None)
+    y_cols_param = options.get('y_cols', None)
 
-    if len(X_cols) == 0 or len(Y_cols) == 0:
-        return {"error": "分组后 X 或 Y 组为空，请检查数据列数"}
+    if x_cols_param and y_cols_param:
+        # 用户指定了分组
+        if hasattr(x_cols_param, 'to_py'):
+            x_cols_param = x_cols_param.to_py()
+        if hasattr(y_cols_param, 'to_py'):
+            y_cols_param = y_cols_param.to_py()
+
+        X_cols = [c for c in numeric_cols if c in x_cols_param]
+        Y_cols = [c for c in numeric_cols if c in y_cols_param]
+
+        if len(X_cols) == 0 or len(Y_cols) == 0:
+            return {"error": "请至少选择一个X变量和一个Y变量"}
+    else:
+        # 兼容旧行为：自动对半分
+        n = len(numeric_cols) // 2
+        X_cols = numeric_cols[:n]
+        Y_cols = numeric_cols[n:]
+
+        if len(X_cols) == 0 or len(Y_cols) == 0:
+            return {"error": "分组后 X 或 Y 组为空，请检查数据列数"}
 
     # 6. 样本量校验
     n_samples = len(df)
@@ -3597,8 +4574,11 @@ def analyze(options):
 
     # 图2：载荷热力图（合并 X 和 Y）
     fig2, ax2 = plt.subplots(figsize=(10, 6))
-    all_loadings = np.vstack([np.array(x_loadings), np.array(y_loadings)])
-    all_labels = [f'X_{i + 1}' for i in range(n_vars_x)] + [f'Y_{i + 1}' for i in range(n_vars_y)]
+    # 转置: (n_components, n_vars) → (n_vars, n_components)，使每一行是一个变量
+    x_load_T = np.array(x_loadings).T  # (n_vars_x, n_components)
+    y_load_T = np.array(y_loadings).T  # (n_vars_y, n_components)
+    all_loadings = np.vstack([x_load_T, y_load_T])  # (n_vars_x + n_vars_y, n_components)
+    all_labels = X_cols + Y_cols
     im = ax2.imshow(all_loadings, cmap='RdBu_r', aspect='auto', vmin=-1, vmax=1)
     ax2.set_xticks(range(n_components))
     ax2.set_xticklabels([f'PC{i + 1}' for i in range(n_components)])
@@ -3651,13 +4631,13 @@ def analyze(options):
     # X 权重
     axes[0].bar(range(len(X_cols)), x_weights[:, 0], color='steelblue')
     axes[0].set_xticks(range(len(X_cols)))
-    axes[0].set_xticklabels([f'X{i + 1}' for i in range(len(X_cols))])
+    axes[0].set_xticklabels(X_cols, fontsize=9)
     axes[0].set_title('X 组典型权重 (第一对)')
     axes[0].set_ylabel('权重')
     # Y 权重
     axes[1].bar(range(len(Y_cols)), y_weights[:, 0], color='coral')
     axes[1].set_xticks(range(len(Y_cols)))
-    axes[1].set_xticklabels([f'Y{i + 1}' for i in range(len(Y_cols))])
+    axes[1].set_xticklabels(Y_cols, fontsize=9)
     axes[1].set_title('Y 组典型权重 (第一对)')
     axes[1].set_ylabel('权重')
     fig5.tight_layout()
@@ -3680,24 +4660,24 @@ def analyze(options):
 
     # 表2：典型权重
     weight_table_x = []
-    for i in range(len(X_cols)):
-        row = [f'X{i + 1}'] + [f'{x_weights[i, j]:.4f}' for j in range(n_components)]
+    for i, col_name in enumerate(X_cols):
+        row = [col_name] + [f'{x_weights[i, j]:.4f}' for j in range(n_components)]
         weight_table_x.append(row)
 
     weight_table_y = []
-    for i in range(len(Y_cols)):
-        row = [f'Y{i + 1}'] + [f'{y_weights[i, j]:.4f}' for j in range(n_components)]
+    for i, col_name in enumerate(Y_cols):
+        row = [col_name] + [f'{y_weights[i, j]:.4f}' for j in range(n_components)]
         weight_table_y.append(row)
 
     # 表3：结构载荷
     loading_table_x = []
-    for i in range(len(X_cols)):
-        row = [f'X{i + 1}'] + [f'{x_loadings[j][i]:.4f}' for j in range(n_components)]
+    for i, col_name in enumerate(X_cols):
+        row = [col_name] + [f'{x_loadings[j][i]:.4f}' for j in range(n_components)]
         loading_table_x.append(row)
 
     loading_table_y = []
-    for i in range(len(Y_cols)):
-        row = [f'Y{i + 1}'] + [f'{y_loadings[j][i]:.4f}' for j in range(n_components)]
+    for i, col_name in enumerate(Y_cols):
+        row = [col_name] + [f'{y_loadings[j][i]:.4f}' for j in range(n_components)]
         loading_table_y.append(row)
 
     # 表4：典型变量得分
@@ -4488,7 +5468,309 @@ def analyze(options=None) -> Dict[str, object]:
   </script>
 
   <script type="text/python-src" data-module="Correspondence">
-# 此处存放 对应分析 代码
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import io
+
+
+def get_columns(options):
+    if not isinstance(options, dict):
+        options = options.to_py()
+    data_path = options.get('data_path')
+    if not data_path:
+        return {"error": "请先在左侧上传数据文件"}
+    try:
+        df = pd.read_csv(data_path)
+    except Exception as e:
+        return {"error": f"读取数据失败: {e}"}
+    return {"columns": df.columns.tolist()}
+
+
+def analyze(options):
+    if not isinstance(options, dict):
+        options = options.to_py()
+
+    data_path = options.get('data_path')
+    if not data_path:
+        return {"error": "请先在左侧上传数据文件"}
+
+    try:
+        df = pd.read_csv(data_path)
+    except Exception as e:
+        return {"error": f"读取数据失败: {e}"}
+
+    row_var = options.get('row_var')
+    col_var = options.get('col_var')
+
+    if row_var not in df.columns:
+        return {"error": f"列名不存在: {row_var}"}
+    if col_var not in df.columns:
+        return {"error": f"列名不存在: {col_var}"}
+    if row_var == col_var:
+        return {"error": "行列变量不能相同"}
+
+    ct = pd.crosstab(df[row_var], df[col_var])
+    n_rows, n_cols = ct.shape
+
+    if n_rows < 2 or n_cols < 2:
+        return {"error": f"列联表太小：{n_rows}行×{n_cols}列，至少需要2×2"}
+
+    row_labels = ct.index.tolist()
+    col_labels = ct.columns.tolist()
+
+    F = ct.values.astype(float)
+    N = F.sum()
+    P = F / N
+
+    r = P.sum(axis=1)
+    c = P.sum(axis=0)
+
+    Dr_inv_sqrt = np.diag(1.0 / np.sqrt(r + 1e-15))
+    Dc_inv_sqrt = np.diag(1.0 / np.sqrt(c + 1e-15))
+
+    S = Dr_inv_sqrt @ (P - np.outer(r, c)) @ Dc_inv_sqrt
+
+    U, s, Vt = np.linalg.svd(S, full_matrices=False)
+
+    tol = 1e-10
+    valid = s > tol
+    s = s[valid]
+    U = U[:, valid]
+    Vt = Vt[valid, :]
+
+    max_dims = min(len(s), n_rows - 1, n_cols - 1)
+    n_dims_raw = options.get('n_dims', None)
+    n_dims = n_dims_raw if (n_dims_raw and n_dims_raw > 0) else 2
+    n_dims = min(n_dims, max_dims)
+    if n_dims < 1:
+        n_dims = 1
+
+    s_k = s[:n_dims]
+    U_k = U[:, :n_dims]
+    Vt_k = Vt[:n_dims, :]
+
+    inertia = s_k ** 2
+    total_inertia = np.sum(s ** 2)
+    explained_ratio = inertia / (total_inertia + 1e-15)
+    cum_ratio = np.cumsum(explained_ratio)
+
+    phi = Dr_inv_sqrt @ U_k
+    gamma = Dc_inv_sqrt @ Vt_k.T
+
+    row_principal = phi * s_k[np.newaxis, :]
+    col_principal = gamma * s_k[np.newaxis, :]
+
+    row_sym = phi * np.sqrt(s_k[np.newaxis, :])
+    col_sym = gamma * np.sqrt(s_k[np.newaxis, :])
+
+    row_contrib = np.zeros((n_rows, n_dims))
+    col_contrib = np.zeros((n_cols, n_dims))
+    for k in range(n_dims):
+        row_contrib[:, k] = r * row_principal[:, k] ** 2 / (inertia[k] + 1e-15)
+        col_contrib[:, k] = c * col_principal[:, k] ** 2 / (inertia[k] + 1e-15)
+
+    row_cos2 = np.zeros((n_rows, n_dims))
+    col_cos2 = np.zeros((n_cols, n_dims))
+    for i in range(n_rows):
+        denom = np.sum(row_principal[i, :] ** 2) + 1e-15
+        row_cos2[i, :] = row_principal[i, :] ** 2 / denom
+    for j in range(n_cols):
+        denom = np.sum(col_principal[j, :] ** 2) + 1e-15
+        col_cos2[j, :] = col_principal[j, :] ** 2 / denom
+
+    svgs = []
+
+    # Chart 1: Symmetric Map
+    fig1, ax1 = plt.subplots(figsize=(8, 7))
+    if n_dims >= 2:
+        ax1.scatter(row_sym[:, 0], row_sym[:, 1], c='steelblue', edgecolors='#1e3b5c',
+                    s=80, zorder=3, label='Rows')
+        ax1.scatter(col_sym[:, 0], col_sym[:, 1], c='crimson', edgecolors='darkred',
+                    s=80, marker='s', zorder=3, label='Columns')
+        for i, lbl in enumerate(row_labels):
+            ax1.annotate(lbl, (row_sym[i, 0], row_sym[i, 1]),
+                         textcoords="offset points", xytext=(5, 5), fontsize=8)
+        for j, lbl in enumerate(col_labels):
+            ax1.annotate(lbl, (col_sym[j, 0], col_sym[j, 1]),
+                         textcoords="offset points", xytext=(5, 5), fontsize=8)
+        ax1.set_xlabel(f'Dimension 1 ({explained_ratio[0]:.1%})', fontsize=11)
+        ax1.set_ylabel(f'Dimension 2 ({explained_ratio[1]:.1%})', fontsize=11)
+    else:
+        ax1.text(0.5, 0.5, 'Only one dimension available', transform=ax1.transAxes,
+                 ha='center', va='center', fontsize=14, color='gray')
+        ax1.set_xlabel(f'Dimension 1 ({explained_ratio[0]:.1%})', fontsize=11)
+        ax1.set_ylabel('Dimension 2', fontsize=11)
+
+    ax1.axhline(y=0, color='grey', linestyle='--', alpha=0.5, zorder=1)
+    ax1.axvline(x=0, color='grey', linestyle='--', alpha=0.5, zorder=1)
+    ax1.set_title('Correspondence Analysis - Symmetric Map', fontsize=13, fontweight='bold')
+    ax1.legend(fontsize=9)
+    ax1.grid(alpha=0.3, linestyle='--', zorder=0)
+    fig1.tight_layout()
+    buf = io.BytesIO()
+    fig1.savefig(buf, format='svg')
+    plt.close(fig1)
+    svgs.append(buf.getvalue().decode())
+
+    # Chart 2: Scree Plot
+    fig2, ax2 = plt.subplots(figsize=(8, 4))
+    all_inertia = s ** 2
+    n_all = len(s)
+    dims = range(1, n_all + 1)
+    bar_colors = plt.cm.Blues(np.linspace(0.4, 0.9, n_all))
+    bars = ax2.bar(dims, all_inertia, color=bar_colors, edgecolor='#1e3b5c', linewidth=1.2)
+    for b, v in zip(bars, all_inertia):
+        ax2.text(b.get_x() + b.get_width() / 2, b.get_height() + 0.001,
+                 f'{v:.4f}', ha='center', va='bottom', fontsize=8)
+
+    ax3 = ax2.twinx()
+    cum_prop = np.cumsum(all_inertia) / (total_inertia + 1e-15)
+    ax3.plot(dims, cum_prop, 'ro-', markersize=6, linewidth=2, label='Cumulative proportion')
+    ax3.axhline(y=0.8, color='green', linestyle='--', alpha=0.6, linewidth=1)
+    ax3.axhline(y=0.9, color='red', linestyle='--', alpha=0.6, linewidth=1)
+
+    ax2.set_xlabel('Dimension', fontsize=11)
+    ax2.set_ylabel('Inertia', fontsize=11)
+    ax3.set_ylabel('Cumulative proportion', fontsize=11)
+    ax2.set_title('Inertia and Cumulative Proportion', fontsize=13, fontweight='bold')
+    ax2.set_xticks(dims)
+    ax2.grid(axis='y', alpha=0.3, linestyle='--')
+    fig2.tight_layout()
+    buf = io.BytesIO()
+    fig2.savefig(buf, format='svg')
+    plt.close(fig2)
+    svgs.append(buf.getvalue().decode())
+
+    # Chart 3: Row Contributions
+    dim_label = '+'.join([f'Dim{d + 1}' for d in range(n_dims)])
+    top_n_rows = min(15, n_rows)
+    row_total_contrib = np.sum(row_contrib, axis=1)
+    top_idx_rows = np.argsort(row_total_contrib)[-top_n_rows:][::-1]
+
+    fig3, ax4 = plt.subplots(figsize=(8, max(4, top_n_rows * 0.35)))
+    ax4.barh(range(top_n_rows), row_total_contrib[top_idx_rows],
+             color='steelblue', edgecolor='#1e3b5c')
+    ax4.set_yticks(range(top_n_rows))
+    ax4.set_yticklabels([row_labels[i] for i in top_idx_rows], fontsize=9)
+    ax4.invert_yaxis()
+    ax4.set_xlabel(f'Total contribution ({dim_label})', fontsize=11)
+    ax4.set_title('Row contributions to dimensions', fontsize=13, fontweight='bold')
+    ax4.grid(axis='x', alpha=0.3, linestyle='--')
+    fig3.tight_layout()
+    buf = io.BytesIO()
+    fig3.savefig(buf, format='svg')
+    plt.close(fig3)
+    svgs.append(buf.getvalue().decode())
+
+    # Chart 4: Column Contributions
+    top_n_cols = min(15, n_cols)
+    col_total_contrib = np.sum(col_contrib, axis=1)
+    top_idx_cols = np.argsort(col_total_contrib)[-top_n_cols:][::-1]
+
+    fig4, ax5 = plt.subplots(figsize=(8, max(4, top_n_cols * 0.35)))
+    ax5.barh(range(top_n_cols), col_total_contrib[top_idx_cols],
+             color='crimson', edgecolor='darkred')
+    ax5.set_yticks(range(top_n_cols))
+    ax5.set_yticklabels([col_labels[j] for j in top_idx_cols], fontsize=9)
+    ax5.invert_yaxis()
+    ax5.set_xlabel(f'Total contribution ({dim_label})', fontsize=11)
+    ax5.set_title('Column contributions to dimensions', fontsize=13, fontweight='bold')
+    ax5.grid(axis='x', alpha=0.3, linestyle='--')
+    fig4.tight_layout()
+    buf = io.BytesIO()
+    fig4.savefig(buf, format='svg')
+    plt.close(fig4)
+    svgs.append(buf.getvalue().decode())
+
+    # --- Tables ---
+    # Table 1: Inertia table
+    inertia_header = ['维度', '奇异值', '惯性', '解释率', '累积率']
+    inertia_rows = []
+    for k in range(n_dims):
+        inertia_rows.append([
+            f'Dim {k + 1}',
+            f'{s_k[k]:.4f}',
+            f'{inertia[k]:.4f}',
+            f'{explained_ratio[k]:.1%}',
+            f'{cum_ratio[k]:.1%}'
+        ])
+
+    # Table 2: Row coordinates
+    row_header = ['类别', 'Dim1', 'Dim2', '贡献(Dim1)', '贡献(Dim2)',
+                  "Cos\u00b2(Dim1)", "Cos\u00b2(Dim2)"]
+    row_rows = []
+    for i in range(n_rows):
+        row = [row_labels[i]]
+        # Dim1, Dim2
+        for d in range(2):
+            if d < n_dims:
+                row.append(f'{row_principal[i, d]:.4f}')
+            else:
+                row.append('0.0000')
+        # 贡献(Dim1), 贡献(Dim2)
+        for d in range(2):
+            if d < n_dims:
+                row.append(f'{row_contrib[i, d] * 100:.2f}%')
+            else:
+                row.append('0.00%')
+        # Cos²(Dim1), Cos²(Dim2)
+        for d in range(2):
+            if d < n_dims:
+                row.append(f'{row_cos2[i, d]:.4f}')
+            else:
+                row.append('0.0000')
+        row_rows.append(row)
+
+    # Table 3: Column coordinates
+    col_header = ['类别', 'Dim1', 'Dim2', '贡献(Dim1)', '贡献(Dim2)',
+                  "Cos\u00b2(Dim1)", "Cos\u00b2(Dim2)"]
+    col_rows = []
+    for j in range(n_cols):
+        row = [col_labels[j]]
+        for d in range(2):
+            if d < n_dims:
+                row.append(f'{col_principal[j, d]:.4f}')
+            else:
+                row.append('0.0000')
+        for d in range(2):
+            if d < n_dims:
+                row.append(f'{col_contrib[j, d] * 100:.2f}%')
+            else:
+                row.append('0.00%')
+        for d in range(2):
+            if d < n_dims:
+                row.append(f'{col_cos2[j, d]:.4f}')
+            else:
+                row.append('0.0000')
+        col_rows.append(row)
+
+    # Table 4: Contingency table
+    ct_header = [row_var] + col_labels
+    ct_rows = []
+    for i in range(n_rows):
+        row = [row_labels[i]] + [f'{int(F[i, j])}' for j in range(n_cols)]
+        ct_rows.append(row)
+
+    # Metrics
+    pct = f'{(sum(explained_ratio) if n_dims >= 2 else explained_ratio[0]):.1%}'
+
+    return {
+        "svgs": svgs,
+        "metrics": {
+            "行类别数": n_rows,
+            "列类别数": n_cols,
+            "总惯性": f'{total_inertia:.4f}',
+            "前2维解释率": pct
+        },
+        "tables": [
+            {"header": inertia_header, "rows": inertia_rows},
+            {"header": row_header, "rows": row_rows},
+            {"header": col_header, "rows": col_rows},
+            {"header": ct_header, "rows": ct_rows}
+        ]
+    }
+
   </script>
 
   <script type="text/python-src" data-module="Evaluation">
@@ -4528,8 +5810,11 @@ def analyze(options):
         selected_indicators = [c.strip() for c in selected_indicators.split(',') if c.strip()]
     if selected_indicators and isinstance(selected_indicators, list) and len(selected_indicators) > 0:
         available_cols = [col for col in selected_indicators if col in numeric_cols]
-        if len(available_cols) >= 2:
+        # 只要用户明确指定了指标，就只使用匹配到的列（至少 1 列即可生效）
+        if len(available_cols) >= 1:
             numeric_cols = available_cols
+            if len(numeric_cols) < 2:
+                return {"error": f"指标匹配后不足 2 个数值列（匹配到: {numeric_cols}）"}
     
     if method_type == 'ahp':
         return run_ahp(df, numeric_cols, options)
@@ -4539,18 +5824,35 @@ def analyze(options):
 
 def run_ahp(df, numeric_cols, options):
     """层次分析法"""
-    # 获取判断矩阵
-    judgement_matrix_str = options.get('judgement_matrix', '')
+    # 判断矩阵获取优先级：多矩阵(judgement_matrices) > 单矩阵(judgement_matrix) > 自动权重
     weights = None
-    
-    if judgement_matrix_str:
+
+    # 1. 尝试获取多判断矩阵（来自网格矩阵UI）
+    judgement_matrices_str = options.get('judgement_matrices', '')
+    if judgement_matrices_str:
         try:
-            judgement_matrix = json.loads(judgement_matrix_str)
-            if len(judgement_matrix) == len(numeric_cols):
-                weights = calculate_ahp_weights(judgement_matrix)
+            matrices = json.loads(judgement_matrices_str)
+            if isinstance(matrices, list) and len(matrices) > 0:
+                # 过滤空矩阵
+                valid_matrices = [m for m in matrices if len(m) == len(numeric_cols)]
+                if len(valid_matrices) >= 1:
+                    agg_matrix = aggregate_matrices(valid_matrices)
+                    weights = calculate_ahp_weights(agg_matrix)
         except:
             pass
+
+    # 2. 尝试获取单判断矩阵（向后兼容）
+    if weights is None:
+        judgement_matrix_str = options.get('judgement_matrix', '')
+        if judgement_matrix_str:
+            try:
+                judgement_matrix = json.loads(judgement_matrix_str)
+                if len(judgement_matrix) == len(numeric_cols):
+                    weights = calculate_ahp_weights(judgement_matrix)
+            except:
+                pass
     
+    # 3. 自动计算权重（默认）
     if weights is None:
         weights = calculate_auto_weights(df, numeric_cols)
     
@@ -4597,17 +5899,28 @@ def run_ahp(df, numeric_cols, options):
 def run_comprehensive(df, numeric_cols, options):
     """综合分析法"""
     method = options.get('method', 'topsis')
-    weight_method = options.get('weight_method', 'equal')
     
-    # 计算权重
-    if weight_method == 'equal':
-        weights = np.ones(len(numeric_cols)) / len(numeric_cols)
-    elif weight_method == 'std':
+    # 权重优先级：AHP 判断矩阵 → 标准差法 → 等权重法
+    weights = None
+    judgement_matrices_str = options.get('judgement_matrices', '')
+    if judgement_matrices_str:
+        try:
+            matrices = json.loads(judgement_matrices_str)
+            if isinstance(matrices, list) and len(matrices) > 0:
+                valid_matrices = [m for m in matrices if len(m) == len(numeric_cols)]
+                if len(valid_matrices) >= 1:
+                    agg_matrix = aggregate_matrices(valid_matrices)
+                    weights = calculate_ahp_weights(agg_matrix)
+        except:
+            pass
+    
+    if weights is None:
         data = df[numeric_cols].values
         stds = data.std(axis=0)
-        weights = stds / (stds.sum() + 1e-10)
-    else:
-        weights = np.ones(len(numeric_cols)) / len(numeric_cols)
+        if stds.sum() > 0:
+            weights = stds / (stds.sum() + 1e-10)
+        else:
+            weights = np.ones(len(numeric_cols)) / len(numeric_cols)
     
     # 标准化
     normalized = normalize_minmax(df[numeric_cols].values)
@@ -4678,6 +5991,29 @@ def calculate_auto_weights(df, numeric_cols):
     stds = data_norm.std(axis=0)
     weights = stds / (stds.sum() + 1e-10)
     return weights
+
+
+def aggregate_matrices(matrices_list):
+    """多判断矩阵逐元素几何平均法聚合
+
+    将多个专家的判断矩阵进行逐元素几何平均，得到聚合判断矩阵。
+
+    Args:
+        matrices_list: list of 2D lists/arrays, 每个元素是一个 N×N 判断矩阵
+
+    Returns:
+        np.array: 聚合后的判断矩阵
+    """
+    if not matrices_list or len(matrices_list) == 0:
+        return None
+    # 转换为 numpy 数组，shape = (k, n, n)
+    matrices_arr = np.array([np.array(m) for m in matrices_list])
+    # 逐元素相乘
+    product = np.prod(matrices_arr, axis=0)
+    # 几何平均
+    k = len(matrices_list)
+    geom_mean = product ** (1.0 / k)
+    return geom_mean
 
 
 def calculate_ahp_weights(matrix):
@@ -5450,6 +6786,34 @@ if __name__ == '__main__':
             f.write(result["svgs"][0])
         print("\n图表已保存到当前目录下的 test_output.svg，你可以双击用浏览器打开查看图表是否正确。")
   </script>
+
+  <!-- 数据清洗面板 -->
+  <div id="cleanPanel" class="clean-panel-overlay" style="display:none;">
+    <div class="clean-panel">
+      <div class="clean-panel-header">
+        <div class="clean-panel-title"><i class="fas fa-broom"></i> 数据清洗</div>
+        <button class="clean-panel-close" onclick="closeCleanPanel()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="clean-panel-body">
+        <div class="clean-panel-info" id="cleanPanelInfo"></div>
+        <div class="clean-panel-section">
+          <div class="clean-panel-section-title"><i class="fas fa-table"></i> 数据预览（前5行）</div>
+          <div class="clean-preview-wrap" id="cleanPreview"></div>
+        </div>
+        <div class="clean-panel-section">
+          <div class="clean-panel-section-title"><i class="fas fa-tags"></i> 列角色设置</div>
+          <p class="param-hint" style="margin:0 0 8px 4px;">为每一列指定角色：数值列会做清洗和缺失填补，索引列和分类列保持原样。</p>
+          <div class="clean-column-roles" id="cleanColumnRoles"></div>
+        </div>
+      </div>
+      <div class="clean-panel-footer">
+        <button class="btn-secondary" onclick="closeCleanPanel()">取消</button>
+        <button class="btn-primary" id="btnApplyClean" onclick="applyCleaning()">
+          <i class="fas fa-check"></i> 确认清洗
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script src="js/navigation.js"></script>
   <script src="js/boot.js"></script>
