@@ -1252,6 +1252,8 @@ window.MODULE_HTML = {
           <option value="统计量的箱线图">统计量的箱线图</option>
           <option value="两变量散点图">两变量散点图</option>
           <option value="多变量矩阵散点图">多变量矩阵散点图</option>
+          <option value="单变量饼图">单变量饼图</option>
+          <option value="多变量饼图">多变量饼图</option>
         </select>
       </div>
       <div class="param-field">
@@ -1259,7 +1261,7 @@ window.MODULE_HTML = {
         <input type="text" class="form-control" data-param="x_var" placeholder="如: 北京 或 变量1">
       </div>
       <div class="param-field">
-        <label>Y轴变量 (单变量条图或散点图填列名)</label>
+        <label>Y轴变量 (单变量条图或散点图填列名；多变量用逗号分隔)</label>
         <input type="text" class="form-control" data-param="y_var" placeholder="如: 变量2">
       </div>
     </div>
@@ -1294,10 +1296,33 @@ window.MODULE_HTML = {
     <div class="preview-header">
       <span><i class="fas fa-table"></i> 统计结果表 (均值、协方差矩阵、相关系数矩阵)</span>
     </div>
-    <div id="dynamic-tables-container" style="display: flex; flex-direction: column; gap: 20px; padding: 10px;">
+    <div style="margin-bottom: 20px;">
+      <div style="font-size:13px;font-weight:500;color:#2d3748;margin-bottom:8px;">变量均值</div>
+      <table class="simple-table">
+        <thead><tr><th>变量</th><th>均值</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+      <div style="font-size:13px;font-weight:500;color:#2d3748;margin-bottom:8px;">协方差矩阵</div>
+      <table class="simple-table">
+        <thead><tr><th>变量</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div>
+      <div style="font-size:13px;font-weight:500;color:#2d3748;margin-bottom:8px;">相关系数矩阵</div>
+      <table class="simple-table">
+        <thead><tr><th>变量</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
   </div>
-</div>`,
+</div>
+
+`,
   "python": `<div class="module-content" id="python">
   <div class="page-header">
     <div class="header-left">
@@ -3986,6 +4011,13 @@ window.MODULE_HTML = {
         <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">rcParams[</span><span style="color: #E6DB74">&#39;font.sans-serif&#39;</span><span style="color: #F8F8F2">]</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[</span><span style="color: #E6DB74">&#39;SimHei&#39;</span><span style="color: #F8F8F2">]</span>
         <span style="color: #F8F8F2">plt</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">rcParams[</span><span style="color: #E6DB74">&#39;axes.unicode_minus&#39;</span><span style="color: #F8F8F2">]</span> <span style="color: #FF4689">=</span> <span style="color: #66D9EF">False</span>
         
+        <span style="color: #F8F8F2">target_idx</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">x_var</span>
+        <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">target_idx</span> <span style="color: #FF4689">not</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">index:</span>
+            <span style="color: #66D9EF">try</span><span style="color: #F8F8F2">:</span>
+                <span style="color: #F8F8F2">target_idx</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">int(target_idx)</span>
+            <span style="color: #66D9EF">except</span> <span style="color: #F8F8F2">(</span><span style="color: #A6E22E">ValueError</span><span style="color: #F8F8F2">,</span> <span style="color: #A6E22E">TypeError</span><span style="color: #F8F8F2">):</span>
+                <span style="color: #66D9EF">pass</span>
+        
         <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">chart_type</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;多变量矩阵散点图&#39;</span><span style="color: #F8F8F2">:</span>
             <span style="color: #F8F8F2">axes</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">pd</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">plotting</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">scatter_matrix(numeric_df,</span> <span style="color: #F8F8F2">figsize</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">(</span><span style="color: #AE81FF">10</span><span style="color: #F8F8F2">,</span> <span style="color: #AE81FF">10</span><span style="color: #F8F8F2">))</span>
             <span style="color: #F8F8F2">fig</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">axes[</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">,</span> <span style="color: #AE81FF">0</span><span style="color: #F8F8F2">]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">get_figure()</span>
@@ -3995,12 +4027,22 @@ window.MODULE_HTML = {
                 <span style="color: #F8F8F2">df[y_var]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">plot(kind</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;bar&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">ax)</span>
             <span style="color: #66D9EF">elif</span> <span style="color: #F8F8F2">chart_type</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;多变量条图&#39;</span><span style="color: #F8F8F2">:</span>
                 <span style="color: #F8F8F2">numeric_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">plot(kind</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;bar&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">ax)</span>
-            <span style="color: #66D9EF">elif</span> <span style="color: #F8F8F2">chart_type</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;基于单样品的条图&#39;</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">x_var</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">index:</span>
-                <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">loc[[x_var]]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">plot(kind</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;bar&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">ax)</span>
+            <span style="color: #66D9EF">elif</span> <span style="color: #F8F8F2">chart_type</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;基于单样品的条图&#39;</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">target_idx</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">index:</span>
+                <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">loc[target_idx]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">plot(kind</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;bar&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">ax)</span>
             <span style="color: #66D9EF">elif</span> <span style="color: #F8F8F2">chart_type</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;统计量的箱线图&#39;</span><span style="color: #F8F8F2">:</span>
                 <span style="color: #F8F8F2">numeric_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">plot(kind</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;box&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">ax)</span>
             <span style="color: #66D9EF">elif</span> <span style="color: #F8F8F2">chart_type</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;两变量散点图&#39;</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">x_var</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">y_var</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns:</span>
                 <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">plot(kind</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;scatter&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">x</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">x_var,</span> <span style="color: #F8F8F2">y</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">y_var,</span> <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">ax)</span>
+            <span style="color: #66D9EF">elif</span> <span style="color: #F8F8F2">chart_type</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;单变量饼图&#39;</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">y_var</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns:</span>
+                <span style="color: #F8F8F2">df[y_var]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">plot(kind</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;pie&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">ax,</span> <span style="color: #F8F8F2">autopct</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;%1.1f%%&#39;</span><span style="color: #F8F8F2">)</span>
+                <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_ylabel(</span><span style="color: #E6DB74">&#39;&#39;</span><span style="color: #F8F8F2">)</span>
+            <span style="color: #66D9EF">elif</span> <span style="color: #F8F8F2">chart_type</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;多变量饼图&#39;</span> <span style="color: #FF4689">and</span> <span style="color: #F8F8F2">y_var:</span>
+                <span style="color: #F8F8F2">cols</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">[c</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span> <span style="color: #66D9EF">for</span> <span style="color: #F8F8F2">c</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">str(y_var)</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">split(</span><span style="color: #E6DB74">&#39;,&#39;</span><span style="color: #F8F8F2">)</span> <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">c</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">strip()</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">numeric_df</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">columns]</span>
+                <span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">cols:</span>
+                    <span style="color: #F8F8F2">numeric_df[cols]</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">sum()</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">plot(kind</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;pie&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">=</span><span style="color: #F8F8F2">ax,</span> <span style="color: #F8F8F2">autopct</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;%1.1f%%&#39;</span><span style="color: #F8F8F2">)</span>
+                    <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">set_ylabel(</span><span style="color: #E6DB74">&#39;&#39;</span><span style="color: #F8F8F2">)</span>
+                <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
+                    <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">text(</span><span style="color: #AE81FF">0.5</span><span style="color: #F8F8F2">,</span> <span style="color: #AE81FF">0.5</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;参数不足或变量不存在&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">ha</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;center&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">va</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;center&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">12</span><span style="color: #F8F8F2">)</span>
             <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
                 <span style="color: #F8F8F2">ax</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">text(</span><span style="color: #AE81FF">0.5</span><span style="color: #F8F8F2">,</span> <span style="color: #AE81FF">0.5</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&#39;参数不足或变量不存在&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">ha</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;center&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">va</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&#39;center&#39;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">fontsize</span><span style="color: #FF4689">=</span><span style="color: #AE81FF">12</span><span style="color: #F8F8F2">)</span>
             <span style="color: #F8F8F2">fig</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">tight_layout()</span>
@@ -4038,26 +4080,6 @@ window.MODULE_HTML = {
         
     <span style="color: #66D9EF">except</span> <span style="color: #A6E22E">Exception</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">e:</span>
         <span style="color: #66D9EF">return</span> <span style="color: #F8F8F2">{</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">:</span> <span style="color: #F8F8F2">str(e)}</span>
-
-<span style="color: #66D9EF">if</span> <span style="color: #F8F8F2">__name__</span> <span style="color: #FF4689">==</span> <span style="color: #E6DB74">&#39;__main__&#39;</span><span style="color: #F8F8F2">:</span>
-    <span style="color: #F8F8F2">test_options</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">{</span>
-        <span style="color: #E6DB74">&#39;data_path&#39;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&#39;test_data.csv&#39;</span><span style="color: #F8F8F2">,</span>
-        <span style="color: #E6DB74">&#39;chart_type&#39;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&#39;多变量条图&#39;</span><span style="color: #F8F8F2">,</span>
-        <span style="color: #E6DB74">&#39;x_var&#39;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&#39;地区&#39;</span><span style="color: #F8F8F2">,</span>
-        <span style="color: #E6DB74">&#39;y_var&#39;</span><span style="color: #F8F8F2">:</span> <span style="color: #E6DB74">&#39;食品&#39;</span>
-    <span style="color: #F8F8F2">}</span>
-    
-    <span style="color: #F8F8F2">result</span> <span style="color: #FF4689">=</span> <span style="color: #F8F8F2">generate_visualization(test_options)</span>
-    
-    <span style="color: #66D9EF">if</span> <span style="color: #E6DB74">&quot;error&quot;</span> <span style="color: #FF4689">in</span> <span style="color: #F8F8F2">result:</span>
-        <span style="color: #F8F8F2">print(</span><span style="color: #E6DB74">&quot;运行出错:&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">result[</span><span style="color: #E6DB74">&quot;error&quot;</span><span style="color: #F8F8F2">])</span>
-    <span style="color: #66D9EF">else</span><span style="color: #F8F8F2">:</span>
-        <span style="color: #F8F8F2">print(</span><span style="color: #E6DB74">&quot;指标计算成功:&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">result[</span><span style="color: #E6DB74">&quot;metrics&quot;</span><span style="color: #F8F8F2">])</span>
-        <span style="color: #F8F8F2">print(</span><span style="color: #E6DB74">&quot;表格生成成功, 包含表格数量:&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">len(result[</span><span style="color: #E6DB74">&quot;tables&quot;</span><span style="color: #F8F8F2">]))</span>
-        
-        <span style="color: #66D9EF">with</span> <span style="color: #F8F8F2">open(</span><span style="color: #E6DB74">&quot;test_output.svg&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #E6DB74">&quot;w&quot;</span><span style="color: #F8F8F2">,</span> <span style="color: #F8F8F2">encoding</span><span style="color: #FF4689">=</span><span style="color: #E6DB74">&quot;utf-8&quot;</span><span style="color: #F8F8F2">)</span> <span style="color: #66D9EF">as</span> <span style="color: #F8F8F2">f:</span>
-            <span style="color: #F8F8F2">f</span><span style="color: #FF4689">.</span><span style="color: #F8F8F2">write(result[</span><span style="color: #E6DB74">&quot;svgs&quot;</span><span style="color: #F8F8F2">][</span><span style="color: #AE81FF">0</span><span style="color: #F8F8F2">])</span>
-        <span style="color: #F8F8F2">print(</span><span style="color: #E6DB74">&quot;</span><span style="color: #AE81FF">\\n</span><span style="color: #E6DB74">图表已保存到当前目录下的 test_output.svg，你可以双击用浏览器打开查看图表是否正确。&quot;</span><span style="color: #F8F8F2">)</span>
 </code></pre>
     </div>
   </div>
@@ -6713,6 +6735,13 @@ def generate_visualization(options):
         plt.rcParams['font.sans-serif'] = ['SimHei']
         plt.rcParams['axes.unicode_minus'] = False
         
+        target_idx = x_var
+        if target_idx not in df.index:
+            try:
+                target_idx = int(target_idx)
+            except (ValueError, TypeError):
+                pass
+        
         if chart_type == '多变量矩阵散点图':
             axes = pd.plotting.scatter_matrix(numeric_df, figsize=(10, 10))
             fig = axes[0, 0].get_figure()
@@ -6722,12 +6751,22 @@ def generate_visualization(options):
                 df[y_var].plot(kind='bar', ax=ax)
             elif chart_type == '多变量条图':
                 numeric_df.plot(kind='bar', ax=ax)
-            elif chart_type == '基于单样品的条图' and x_var in df.index:
-                df.loc[[x_var]].plot(kind='bar', ax=ax)
+            elif chart_type == '基于单样品的条图' and target_idx in df.index:
+                df.loc[target_idx].plot(kind='bar', ax=ax)
             elif chart_type == '统计量的箱线图':
                 numeric_df.plot(kind='box', ax=ax)
             elif chart_type == '两变量散点图' and x_var in df.columns and y_var in df.columns:
                 df.plot(kind='scatter', x=x_var, y=y_var, ax=ax)
+            elif chart_type == '单变量饼图' and y_var in df.columns:
+                df[y_var].plot(kind='pie', ax=ax, autopct='%1.1f%%')
+                ax.set_ylabel('')
+            elif chart_type == '多变量饼图' and y_var:
+                cols = [c.strip() for c in str(y_var).split(',') if c.strip() in numeric_df.columns]
+                if cols:
+                    numeric_df[cols].sum().plot(kind='pie', ax=ax, autopct='%1.1f%%')
+                    ax.set_ylabel('')
+                else:
+                    ax.text(0.5, 0.5, '参数不足或变量不存在', ha='center', va='center', fontsize=12)
             else:
                 ax.text(0.5, 0.5, '参数不足或变量不存在', ha='center', va='center', fontsize=12)
             fig.tight_layout()
@@ -6765,26 +6804,6 @@ def generate_visualization(options):
         
     except Exception as e:
         return {"error": str(e)}
-
-if __name__ == '__main__':
-    test_options = {
-        'data_path': 'test_data.csv',
-        'chart_type': '多变量条图',
-        'x_var': '地区',
-        'y_var': '食品'
-    }
-    
-    result = generate_visualization(test_options)
-    
-    if "error" in result:
-        print("运行出错:", result["error"])
-    else:
-        print("指标计算成功:", result["metrics"])
-        print("表格生成成功, 包含表格数量:", len(result["tables"]))
-        
-        with open("test_output.svg", "w", encoding="utf-8") as f:
-            f.write(result["svgs"][0])
-        print("\n图表已保存到当前目录下的 test_output.svg，你可以双击用浏览器打开查看图表是否正确。")
   </script>
 
   <!-- 数据清洗面板 -->

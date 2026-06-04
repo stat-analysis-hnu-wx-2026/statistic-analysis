@@ -70,38 +70,29 @@
     <div class="preview-header">
       <span><i class="fas fa-table"></i> 统计结果表 (均值、协方差矩阵、相关系数矩阵)</span>
     </div>
-    <div id="dynamic-tables-container" style="display: flex; flex-direction: column; gap: 20px; padding: 10px;">
+    <div style="margin-bottom: 20px;">
+      <div style="font-size:13px;font-weight:500;color:#2d3748;margin-bottom:8px;">变量均值</div>
+      <table class="simple-table">
+        <thead><tr><th>变量</th><th>均值</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+      <div style="font-size:13px;font-weight:500;color:#2d3748;margin-bottom:8px;">协方差矩阵</div>
+      <table class="simple-table">
+        <thead><tr><th>变量</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div>
+      <div style="font-size:13px;font-weight:500;color:#2d3748;margin-bottom:8px;">相关系数矩阵</div>
+      <table class="simple-table">
+        <thead><tr><th>变量</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
   </div>
 </div>
 
-<script>
-function renderTables(tables) {
-    const container = document.getElementById('dynamic-tables-container');
-    if (!container) return;
-    container.innerHTML = '';
-    if (tables && tables.length > 0) {
-        tables.forEach(tableData => {
-            let headerHtml = tableData.header.map(th => 
-                `<th style="padding: 8px; border: 1px solid #e2e8f0; background: #f7fafc; text-align: left;">${th}</th>`
-            ).join('');
-            let rowsHtml = tableData.rows.map(row => {
-                let tds = row.map(td => `<td style="padding: 8px; border: 1px solid #e2e8f0;">${td}</td>`).join('');
-                return `<tr>${tds}</tr>`;
-            }).join('');
-            let tableHtml = `
-                <div style="margin-bottom: 20px;">
-                    <h4 style="margin-bottom: 10px; color: #2d3748;">${tableData.title}</h4>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #4a5568;">
-                        <thead><tr>${headerHtml}</tr></thead>
-                        <tbody>${rowsHtml}</tbody>
-                    </table>
-                </div>
-            `;
-            container.innerHTML += tableHtml;
-        });
-    } else {
-        container.innerHTML = '<div style="color: #a0aec0;">暂无表格数据</div>';
-    }
-}
-</script>
