@@ -47,7 +47,7 @@ def generate_visualization(options):
         for idx, row in corr_df.iterrows():
             corr_table.append([str(idx)] + [f"{x:.4f}" for x in row])
 
-        plt.rcParams['font.sans-serif'] = ['SimHei']
+        plt.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'PingFang SC', 'Heiti TC', 'sans-serif']
         plt.rcParams['axes.unicode_minus'] = False
         
         target_idx = x_var
@@ -73,7 +73,7 @@ def generate_visualization(options):
             elif chart_type == '两变量散点图' and x_var in df.columns and y_var in df.columns:
                 df.plot(kind='scatter', x=x_var, y=y_var, ax=ax)
             elif chart_type == '单变量饼图' and y_var in df.columns:
-                df[y_var].plot(kind='pie', ax=ax, autopct='%1.1f%%')
+                df.groupby(df.index)[y_var].sum().plot(kind='pie', ax=ax, autopct='%1.1f%%')
                 ax.set_ylabel('')
             elif chart_type == '多变量饼图' and y_var:
                 cols = [c.strip() for c in str(y_var).split(',') if c.strip() in numeric_df.columns]
