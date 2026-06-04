@@ -50,6 +50,13 @@ def generate_visualization(options):
         plt.rcParams['font.sans-serif'] = ['SimHei']
         plt.rcParams['axes.unicode_minus'] = False
         
+        target_idx = x_var
+        if target_idx not in df.index:
+            try:
+                target_idx = int(target_idx)
+            except (ValueError, TypeError):
+                pass
+        
         if chart_type == '多变量矩阵散点图':
             axes = pd.plotting.scatter_matrix(numeric_df, figsize=(10, 10))
             fig = axes[0, 0].get_figure()
@@ -59,12 +66,22 @@ def generate_visualization(options):
                 df[y_var].plot(kind='bar', ax=ax)
             elif chart_type == '多变量条图':
                 numeric_df.plot(kind='bar', ax=ax)
-            elif chart_type == '基于单样品的条图' and x_var in df.index:
-                df.loc[[x_var]].plot(kind='bar', ax=ax)
+            elif chart_type == '基于单样品的条图' and target_idx in df.index:
+                df.loc[target_idx].plot(kind='bar', ax=ax)
             elif chart_type == '统计量的箱线图':
                 numeric_df.plot(kind='box', ax=ax)
             elif chart_type == '两变量散点图' and x_var in df.columns and y_var in df.columns:
                 df.plot(kind='scatter', x=x_var, y=y_var, ax=ax)
+            elif chart_type == '单变量饼图' and y_var in df.columns:
+                df[y_var].plot(kind='pie', ax=ax, autopct='%1.1f%%')
+                ax.set_ylabel('')
+            elif chart_type == '多变量饼图' and y_var:
+                cols = [c.strip() for c in str(y_var).split(',') if c.strip() in numeric_df.columns]
+                if cols:
+                    numeric_df[cols].sum().plot(kind='pie', ax=ax, autopct='%1.1f%%')
+                    ax.set_ylabel('')
+                else:
+                    ax.text(0.5, 0.5, '参数不足或变量不存在', ha='center', va='center', fontsize=12)
             else:
                 ax.text(0.5, 0.5, '参数不足或变量不存在', ha='center', va='center', fontsize=12)
             fig.tight_layout()
@@ -102,23 +119,3 @@ def generate_visualization(options):
         
     except Exception as e:
         return {"error": str(e)}
-
-if __name__ == '__main__':
-    test_options = {
-        'data_path': 'test_data.csv',
-        'chart_type': '多变量条图',
-        'x_var': '地区',
-        'y_var': '食品'
-    }
-    
-    result = generate_visualization(test_options)
-    
-    if "error" in result:
-        print("运行出错:", result["error"])
-    else:
-        print("指标计算成功:", result["metrics"])
-        print("表格生成成功, 包含表格数量:", len(result["tables"]))
-        
-        with open("test_output.svg", "w", encoding="utf-8") as f:
-            f.write(result["svgs"][0])
-        print("\n图表已保存到当前目录下的 test_output.svg，你可以双击用浏览器打开查看图表是否正确。")

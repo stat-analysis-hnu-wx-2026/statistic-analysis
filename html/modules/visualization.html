@@ -26,6 +26,8 @@
           <option value="统计量的箱线图">统计量的箱线图</option>
           <option value="两变量散点图">两变量散点图</option>
           <option value="多变量矩阵散点图">多变量矩阵散点图</option>
+          <option value="单变量饼图">单变量饼图</option>
+          <option value="多变量饼图">多变量饼图</option>
         </select>
       </div>
       <div class="param-field">
@@ -33,7 +35,7 @@
         <input type="text" class="form-control" data-param="x_var" placeholder="如: 北京 或 变量1">
       </div>
       <div class="param-field">
-        <label>Y轴变量 (单变量条图或散点图填列名)</label>
+        <label>Y轴变量 (单变量条图或散点图填列名；多变量用逗号分隔)</label>
         <input type="text" class="form-control" data-param="y_var" placeholder="如: 变量2">
       </div>
     </div>
@@ -72,3 +74,34 @@
     </div>
   </div>
 </div>
+
+<script>
+function renderTables(tables) {
+    const container = document.getElementById('dynamic-tables-container');
+    if (!container) return;
+    container.innerHTML = '';
+    if (tables && tables.length > 0) {
+        tables.forEach(tableData => {
+            let headerHtml = tableData.header.map(th => 
+                `<th style="padding: 8px; border: 1px solid #e2e8f0; background: #f7fafc; text-align: left;">${th}</th>`
+            ).join('');
+            let rowsHtml = tableData.rows.map(row => {
+                let tds = row.map(td => `<td style="padding: 8px; border: 1px solid #e2e8f0;">${td}</td>`).join('');
+                return `<tr>${tds}</tr>`;
+            }).join('');
+            let tableHtml = `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 10px; color: #2d3748;">${tableData.title}</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #4a5568;">
+                        <thead><tr>${headerHtml}</tr></thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                </div>
+            `;
+            container.innerHTML += tableHtml;
+        });
+    } else {
+        container.innerHTML = '<div style="color: #a0aec0;">暂无表格数据</div>';
+    }
+}
+</script>
